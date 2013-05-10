@@ -107,7 +107,7 @@ def CleanName(name):
     if len(tokenBitmap) <= 2:
       good = True
     
-    if good and numBad < 1:
+    if good and numBad < 2:
       if newTokens[i] == '*yearBreak*':
         #if we have a year, we can ignore everything after this.
         break
