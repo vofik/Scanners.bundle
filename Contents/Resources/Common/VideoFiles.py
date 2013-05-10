@@ -6,7 +6,8 @@ video_exts = ['3g2', '3gp', 'asf', 'asx', 'avc', 'avi', 'avs', 'bin', 'bivx', 'b
               'iso', 'm2t', 'm2ts', 'm2v', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'mts', 'nrg', 'nsv', 'nuv', 'ogm', 'ogv', 
               'pva', 'qt', 'rm', 'rmvb', 'sdp', 'svq3', 'strm', 'ts', 'ty', 'vdr', 'viv', 'vob', 'vp3', 'wmv', 'wpl', 'wtv', 'xsp', 'xvid', 'webm']
 
-ignore_files = ['[-\._ ]sample', 'sample[-\._ ]', '-trailer\.']
+ignore_samples = ['[-\._ ]sample', 'sample[-\._ ]']
+ignore_trailers = ['-trailer\.']
 ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*']
 ignore_suffixes = ['.dvdmedia']
 
@@ -145,8 +146,13 @@ def Scan(path, files, mediaList, subdirs):
     # Remove files that aren't video.
     (file, ext) = os.path.splitext(i)
       
-    # Remove sample files.
-    for rx in ignore_files:
+    # Remove sample files if they're smaller than 100MB.
+    for rx in ignore_samples:
+      if re.search(rx, i, re.IGNORECASE) and os.path.getsize(i) < 100 * 1024 * 1024:
+        filesToRemove.append(i)
+
+    # Remove trailer files.
+    for rx in ignore_trailers:
       if re.search(rx, i, re.IGNORECASE):
         filesToRemove.append(i)
         
