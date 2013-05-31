@@ -146,9 +146,9 @@ def Scan(path, files, mediaList, subdirs):
     # Remove files that aren't video.
     (file, ext) = os.path.splitext(i)
       
-    # Remove sample files if they're smaller than 100MB.
+    # Remove sample files if they're smaller than 300MB.
     for rx in ignore_samples:
-      if re.search(rx, i, re.IGNORECASE) and os.path.getsize(i) < 100 * 1024 * 1024:
+      if re.search(rx, i, re.IGNORECASE) and os.path.getsize(i) < 300 * 1024 * 1024:
         filesToRemove.append(i)
 
     # Remove trailer files.
