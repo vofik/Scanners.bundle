@@ -16,7 +16,7 @@ def Scan(path, files, mediaList, subdirs, language=None, **kwargs):
     photo = Media.Photo(title)
     
     # Creation date, year.
-    created_at = time.localtime(os.path.getctime(path))
+    created_at = time.localtime(os.path.getmtime(path))
     photo.released_at = time.strftime('%Y-%m-%d', created_at)
     photo.year = int(time.strftime('%Y', created_at))
     
