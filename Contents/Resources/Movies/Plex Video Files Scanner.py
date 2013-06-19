@@ -5,10 +5,10 @@ import re, os, os.path
 import Media, VideoFiles, Stack
 
 # Scans through files, and add to the media list.
-def Scan(path, files, mediaList, subdirs, language=None):
+def Scan(path, files, mediaList, subdirs, language=None, root=None):
   
   # Just look for video files.
-  VideoFiles.Scan(path, files, mediaList, subdirs)
+  VideoFiles.Scan(path, files, mediaList, subdirs, root)
 
   # Add them all.
   for i in files:

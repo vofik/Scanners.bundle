@@ -9,16 +9,16 @@ nice_match = '(.+) [\(\[]([1-2][0-9]{3})[\)\]]'
 standalone_tv_regexs = [ '(.*?)( \(([0-9]+)\))? - ([0-9])+x([0-9]+)(-[0-9]+[Xx]([0-9]+))? - (.*)' ]
 
 # Scans through files, and add to the media list.
-def Scan(path, files, mediaList, subdirs, language=None, **kwargs):
+def Scan(path, files, mediaList, subdirs, language=None, root=None, **kwargs):
   
   # Scan for video files.
-  VideoFiles.Scan(path, files, mediaList, subdirs)
+  VideoFiles.Scan(path, files, mediaList, subdirs, root)
   
   # Check for DVD rips.
   paths = Utils.SplitPath(path)
-  video_ts = ContainsFile(files, 'video_ts.ifo')
+  video_ts = Utils.ContainsFile(files, 'video_ts.ifo')
   if video_ts is None:
-    video_ts = ContainsFile(files, 'video_ts.bup')
+    video_ts = Utils.ContainsFile(files, 'video_ts.bup')
     
   if len(paths) >= 1 and len(paths[0]) > 0 and video_ts is not None:
     print "Found a DVD"
@@ -126,7 +126,7 @@ def Scan(path, files, mediaList, subdirs, language=None, **kwargs):
         subFiles = []
         for f in os.listdir(d):
           subFiles.append(os.path.join(d,f))
-        VideoFiles.Scan(d, subFiles, mediaList, [])
+        VideoFiles.Scan(d, subFiles, mediaList, [], None)
         subdirs.remove(d)
         movie.parts += subFiles
         
@@ -159,12 +159,6 @@ def Scan(path, files, mediaList, subdirs, language=None, **kwargs):
         
   for w in whack:
     subdirs.remove(w)
-    
-def ContainsFile(files, file):
-  for i in files:
-    if os.path.basename(i).lower() == file.lower():
-      return i
-  return None
 
 def checkNfoFile(file, fileCount):
   try:

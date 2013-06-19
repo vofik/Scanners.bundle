@@ -23,9 +23,10 @@ RE_UNICODE_CONTROL =  u'([\u0000-\u0008\u000b-\u000c\u000e-\u001f\ufffe-\uffff])
                         unichr(0xd800),unichr(0xdbff),unichr(0xdc00),unichr(0xdfff)
                       )
 
-def Scan(path, files, mediaList, subdirs, language=None):
+def Scan(path, files, mediaList, subdirs, language=None, root=None):
+
   # Scan for audio files.
-  AudioFiles.Scan(path, files, mediaList, subdirs)
+  AudioFiles.Scan(path, files, mediaList, subdirs, root)
   if len(files) < 1: return
   albumTracks = []
   for f in files:

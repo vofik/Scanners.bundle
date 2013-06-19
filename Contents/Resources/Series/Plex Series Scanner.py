@@ -38,10 +38,10 @@ ends_with_number = '.*([0-9]{1,2})$'
 ends_with_episode = ['[ ]*[0-9]{1,2}x[0-9]{1,3}$', '[ ]*S[0-9]+E[0-9]+$']
 
 # Look for episodes.
-def Scan(path, files, mediaList, subdirs):
+def Scan(path, files, mediaList, subdirs, language=None, root=None):
   
   # Scan for video files.
-  VideoFiles.Scan(path, files, mediaList, subdirs)
+  VideoFiles.Scan(path, files, mediaList, subdirs, root)
   
   # Take top two as show/season, but require at least the top one.
   paths = Utils.SplitPath(path)
