@@ -8,18 +8,18 @@ ROOT_IGNORE_DIRS = ['\$Recycle.Bin', 'System Volume Information', 'Temporary Ite
 # Parse a .plexignore file, append patterns to the plexignore lists.
 def ParsePlexIgnore(file, plexignore_files, plexignore_dirs):
   try:
-    with open(file,'r') as f:
-      for pattern in f:
-        pattern = pattern.strip()
-        if pattern != '' and pattern[0] != '#':
-          if '/' not in pattern:
-            # Match filenames using regex.
-            plexignore_files.append(fnmatch.translate(pattern))
-          else:
-            # Match directories using glob.  Leading slashes screw things up;
-            # these should always be relative to the .plexignore file.
-            if pattern.strip()[0] != '/':
-              plexignore_dirs.append(os.path.join(os.path.dirname(file),pattern))
+    f = open(file,'r')
+    for pattern in f:
+      pattern = pattern.strip()
+      if pattern != '' and pattern[0] != '#':
+        if '/' not in pattern:
+          # Match filenames using regex.
+          plexignore_files.append(fnmatch.translate(pattern))
+        else:
+          # Match directories using glob.  Leading slashes screw things up;
+          # these should always be relative to the .plexignore file.
+          if pattern.strip()[0] != '/':
+            plexignore_dirs.append(os.path.join(os.path.dirname(file),pattern))
   except:
     return
 
