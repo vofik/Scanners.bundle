@@ -4,7 +4,7 @@ import Filter, Media
 photo_exts = ['png','jpg','jpeg','bmp','gif','ico','tif','tiff','tga','pcx','dng','nef','cr2','crw','orf','arw','erf','3fr','dcr','x3f','mef','raf','mrw','pef','sr2', 'mpo', 'jps', 'rw2']
 
 # Scans through files, and add to the media list.
-def Scan(path, files, mediaList, subdirs, language=None, root=None **kwargs):
+def Scan(path, files, mediaList, subdirs, language=None, root=None, **kwargs):
   
   # Filter out bad stuff.
   Filter.Scan(path, files, mediaList, subdirs, photo_exts, root)
