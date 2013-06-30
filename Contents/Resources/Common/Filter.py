@@ -4,7 +4,6 @@ import Utils
 IGNORE_DIRS = ['@eaDir', '.*_UNPACK_.*', '.*_FAILED_.*', '\..*', 'lost\+found']
 ROOT_IGNORE_DIRS = ['\$Recycle.Bin', 'System Volume Information', 'Temporary Items', 'Network Trash Folder']
 
-
 # Parse a .plexignore file, append patterns to the plexignore lists.
 def ParsePlexIgnore(file, plexignore_files, plexignore_dirs):
   try:
@@ -20,6 +19,7 @@ def ParsePlexIgnore(file, plexignore_files, plexignore_dirs):
           # these should always be relative to the .plexignore file.
           if pattern.strip()[0] != '/':
             plexignore_dirs.append(os.path.join(os.path.dirname(file),pattern))
+    f.close()
   except:
     return
 
