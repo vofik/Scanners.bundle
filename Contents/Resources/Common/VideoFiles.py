@@ -11,9 +11,9 @@ ignore_trailers = ['-trailer\.']
 ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*']
 ignore_suffixes = ['.dvdmedia']
 
-source_dict = {'bluray':['bdrc','bdrip','bluray','bd','brrip','hdrip','hddvd','hddvdrip'],'cam':['cam'],'dvd':['ddc','dvdrip','dvd','r1','r3'],'retail':['retail'],
-               'dtv':['dsr','dsrip','hdtv','pdtv','ppv'],'stv':['stv','tvrip'],'r5':['r5'],'screener':['bdscr','dvdscr','dvdscreener','scr','screener'],
-               'svcd':['svcd'],'vcd':['vcd'],'telecine':['tc','telecine'],'telesync':['ts','telesync'],'workprint':['wp','workprint']}
+source_dict = {'bluray':['bdrc','bdrip','bluray','bd','brrip','hdrip','hddvd','hddvdrip'],'cam':['cam'],'dvd':['ddc','dvdrip','dvd','r1','r3','r5'],'retail':['retail'],
+               'dtv':['dsr','dsrip','hdtv','pdtv','ppv'],'stv':['stv','tvrip'],'screener':['bdscr','dvdscr','dvdscreener','scr','screener'],
+               'svcd':['svcd'],'vcd':['vcd'],'telecine':['tc','telecine'],'telesync':['ts','telesync'],'web':['webrip','web-dl'],'workprint':['wp','workprint']}
 source = []
 for d in source_dict:
   for s in source_dict[d]:
