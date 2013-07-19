@@ -136,7 +136,7 @@ def CleanName(name):
   return (titlecase.titlecase(cleanedName), year)
 
 # Remove files that aren't videos.
-def Scan(path, files, mediaList, subdirs, root):
+def Scan(path, files, mediaList, subdirs, root=None):
   
   # Filter out bad stuff.
   Filter.Scan(path, files, mediaList, subdirs, video_exts, root)

@@ -25,7 +25,7 @@ def ParsePlexIgnore(file, plexignore_files, plexignore_dirs):
 
 
 # Remove files and directories that don't make sense to scan.
-def Scan(path, files, mediaList, subdirs, exts, root):
+def Scan(path, files, mediaList, subdirs, exts, root=None):
 
   files_to_whack = []
   plexignore_files = []
