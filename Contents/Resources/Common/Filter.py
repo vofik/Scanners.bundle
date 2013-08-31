@@ -98,7 +98,8 @@ def Scan(path, files, mediaList, subdirs, exts, root=None):
   # Whack files.
   files_to_whack = list(set(files_to_whack))
   for i in files_to_whack:
-    files.remove(i)
+    if i in files:
+      files.remove(i)
 
   # Remove the directories.
   dirs_to_whack = list(set(dirs_to_whack))
