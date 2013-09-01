@@ -1,13 +1,11 @@
 import os, os.path, time
-import Filter, Media
-
-photo_exts = ['png','jpg','jpeg','bmp','gif','ico','tif','tiff','tga','pcx','dng','nef','cr2','crw','orf','arw','erf','3fr','dcr','x3f','mef','raf','mrw','pef','sr2', 'mpo', 'jps', 'rw2']
+import Filter, Media, PhotoFiles
 
 # Scans through files, and add to the media list.
 def Scan(path, files, mediaList, subdirs, language=None, root=None, **kwargs):
   
   # Filter out bad stuff.
-  Filter.Scan(path, files, mediaList, subdirs, photo_exts, root)
+  PhotoFiles.Scan(path, files, mediaList, subdirs, root)
   
   # Add all the photos to the list.
   for path in files:
