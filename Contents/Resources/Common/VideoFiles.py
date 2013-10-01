@@ -1,6 +1,6 @@
 #!/usr/bin/python2.4
 import Filter
-import os.path, re, datetime, titlecase, unicodedata
+import os.path, re, datetime, titlecase, unicodedata, sys
 
 video_exts = ['3g2', '3gp', 'asf', 'asx', 'avc', 'avi', 'avs', 'bin', 'bivx', 'bup', 'divx', 'dv', 'dvr-ms', 'evo', 'fli', 'flv', 'ifo', 'img', 
               'iso', 'm2t', 'm2ts', 'm2v', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'mts', 'nrg', 'nsv', 'nuv', 'ogm', 'ogv', 'tp',
@@ -33,7 +33,7 @@ def CleanName(name):
   orig = name
 
   # Make sure we pre-compose.
-  name = unicodedata.normalize('NFKC', name.decode('utf-8'))
+  name = unicodedata.normalize('NFKC', name.decode(sys.getfilesystemencoding()))
   name = name.lower()
 
   # grab the year, if there is one. set ourselves up to ignore everything after the year later on.
