@@ -197,6 +197,15 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
         for rx in date_regexps:
           match = re.search(rx, file)
           if match:
+
+           # Make sure there's not a stronger season/ep match for the same file.
+            try:
+              for r in episode_regexps[:-1] + standalone_episode_regexs:
+                if re.search(r, file):
+                  raise
+            except:
+              break
+
             year = int(match.group('year'))
             month = int(match.group('month'))
             day = int(match.group('day'))
