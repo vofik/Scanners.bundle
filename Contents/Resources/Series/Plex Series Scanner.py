@@ -25,7 +25,7 @@ standalone_episode_regexs = [
 season_regex = '.*?(?P<season>[0-9]+)$' # folder for a season
 
 just_episode_regexs = [
-    '(?P<ep>[0-9]{1,3})[\. -_]of[\. -_]+[0-9]{1,3}',       # 01 of 08
+    '(?P<ep>[0-9]{1,3})[\. -_]*of[\. -_]*[0-9]{1,3}',       # 01 of 08
     '^(?P<ep>[0-9]{1,3})[^0-9]',                           # 01 - Foo
     'e[a-z]*[ \.\-_]*(?P<ep>[0-9]{2,3})([^0-9c-uw-z%]|$)', # Blah Blah ep234
     '.*?[ \.\-_](?P<ep>[0-9]{2,3})[^0-9c-uw-z%]+',         # Flah - 04 - Blah
@@ -45,6 +45,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
   
   # Take top two as show/season, but require at least the top one.
   paths = Utils.SplitPath(path)
+  shouldStack = True
   
   if len(paths) == 1 and len(paths[0]) == 0:
   
@@ -291,6 +292,10 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
                 # See if we accidentally parsed the episode as season.
                 if the_episode >= 100 and int(the_episode / 100) == the_season:
                   the_episode = the_episode % 100
+
+              # Prevent standalone eps matching the "XX of YY" regex from stacking.
+              if rx == just_episode_regexs[0]:
+                shouldStack = False
               
               tv_show = Media.Episode(show, the_season, the_episode, None, year)
               tv_show.parts.append(i)
@@ -302,7 +307,8 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
           print "Got nothing for:", file
           
   # Stack the results.
-  Stack.Scan(path, files, mediaList, subdirs)
+  if shouldStack:
+    Stack.Scan(path, files, mediaList, subdirs)
   
 def find_data(atom, name):
   child = atomsearch.find_path(atom, name)
