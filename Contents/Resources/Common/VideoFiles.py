@@ -32,8 +32,15 @@ def CleanName(name):
   
   orig = name
 
-  # Make sure we pre-compose.
-  name = unicodedata.normalize('NFKC', name.decode(sys.getfilesystemencoding()))
+  # Make sure we pre-compose.  Try to decode with reported filesystem encoding, then with UTF-8 since some filesystems lie.
+  try:
+    name = unicodedata.normalize('NFKC', name.decode(sys.getfilesystemencoding()))
+  except:
+    try:
+      name = unicodedata.normalize('NFKC', name.decode('utf-8'))
+    except:
+      pass
+
   name = name.lower()
 
   # grab the year, if there is one. set ourselves up to ignore everything after the year later on.
