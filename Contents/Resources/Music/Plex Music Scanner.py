@@ -44,8 +44,10 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
         title = os.path.splitext(os.path.split(f)[1])[0]
 
       if track == None:
-        # See if we have a tracknumber in the title and strip it.
-        title = re.sub("^[0-9]{1,3}[ .-].+", '', title)
+        # See if we have a tracknumber in the title; if so, extract and strip it.
+        m = re.match("^([0-9]{1,3})[ .-]+(.*)$", title)
+        if m:
+          track, title = int(m.group(1)), m.group(2)
       else:
         # Check to see if the title starts with the track number and whack it.
         title = re.sub("^[ 0]*%s[ ]+" % track, '', title)
