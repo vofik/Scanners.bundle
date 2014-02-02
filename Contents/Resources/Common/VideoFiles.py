@@ -2,13 +2,13 @@
 import Filter
 import os.path, re, datetime, titlecase, unicodedata, sys
 
-video_exts = ['3g2', '3gp', 'asf', 'asx', 'avc', 'avi', 'avs', 'bin', 'bivx', 'bup', 'divx', 'dv', 'dvr-ms', 'evo', 'fli', 'flv', 'ifo', 'img', 
-              'iso', 'm2t', 'm2ts', 'm2v', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'mts', 'nrg', 'nsv', 'nuv', 'ogm', 'ogv', 'tp',
+video_exts = ['3g2', '3gp', 'asf', 'asx', 'avc', 'avi', 'avs', 'bivx', 'bup', 'divx', 'dv', 'dvr-ms', 'evo', 'fli', 'flv',
+              'm2t', 'm2ts', 'm2v', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'mts', 'nrg', 'nsv', 'nuv', 'ogm', 'ogv', 'tp',
               'pva', 'qt', 'rm', 'rmvb', 'sdp', 'svq3', 'strm', 'ts', 'ty', 'vdr', 'viv', 'vob', 'vp3', 'wmv', 'wpl', 'wtv', 'xsp', 'xvid', 'webm']
 
 ignore_samples = ['[-\._ ]sample', 'sample[-\._ ]']
 ignore_trailers = ['-trailer\.']
-ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*']
+ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*', 'bdmv', 'video_ts']
 ignore_suffixes = ['.dvdmedia']
 
 source_dict = {'bluray':['bdrc','bdrip','bluray','bd','brrip','hdrip','hddvd','hddvdrip'],'cam':['cam'],'dvd':['ddc','dvdrip','dvd','r1','r3','r5'],'retail':['retail'],
@@ -23,7 +23,7 @@ for d in source_dict:
 audio = ['([^0-9])5\.1[ ]*ch(.)','([^0-9])5\.1([^0-9]?)','([^0-9])7\.1[ ]*ch(.)','([^0-9])7\.1([^0-9])']
 subs = ['multi','multisubs']
 misc = ['cd1','cd2','1cd','2cd','custom','internal','repack','read.nfo','readnfo','nfofix','proper','rerip','dubbed','subbed','extended','unrated','xxx','nfo','dvxa']
-format = ['ac3','dc','divx','fragment','limited','ogg','ogm','ntsc','pal','ps3avchd','r1','r3','r5','720i','720p','1080i','1080p','x264','xvid','vorbis','aac','dts','fs','ws','1920x1080','1280x720','h264']
+format = ['ac3','dc','divx','fragment','limited','ogg','ogm','ntsc','pal','ps3avchd','r1','r3','r5','720i','720p','1080i','1080p','remux','x264','xvid','vorbis','aac','dts','fs','ws','1920x1080','1280x720','h264']
 edition = ['dc','se'] # dc = directors cut, se = special edition
 yearRx = '([\(\[\.\-])([1-2][0-9]{3})([\.\-\)\]_,+])'
 
