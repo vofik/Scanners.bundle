@@ -63,6 +63,16 @@ def Scan(path, files, mediaList, subdirs, exts, root=None):
     # Broken symlinks and zero byte files need not apply.
     if os.path.exists(filename) == False or os.path.getsize(filename) == 0:
       files_to_whack.append(i)
+
+    # Remove unreadable files.
+    if not os.access(filename, os.R_OK):
+      # If access() claims the file is unreadable, try to read a byte just to be sure.
+      try:
+        f = open(file,'r')
+        f.read(1)
+        f.close()
+      except:
+        files_to_whack.append(i)
       
     # Remove hidden files.
     if len(file) == 0 or file[0] == '.':
