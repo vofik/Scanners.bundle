@@ -68,7 +68,7 @@ def Scan(path, files, mediaList, subdirs, exts, root=None):
     if not os.access(filename, os.R_OK):
       # If access() claims the file is unreadable, try to read a byte just to be sure.
       try:
-        f = open(file,'r')
+        f = open(file,'rb')
         f.read(1)
         f.close()
       except:
