@@ -59,7 +59,7 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
         if album == '[Unknown Album]': album = pathAlbum
       
       #make sure our last move is to encode to utf-8 before handing text back.
-      t = Media.Track(cleanPass(artist), cleanPass(album), cleanPass(title), track, disc=disc, album_artist=cleanPass(album_artist), guid=None, filename=f)
+      t = Media.Track(cleanPass(artist), cleanPass(album), cleanPass(title), track, disc=disc, album_artist=cleanPass(album_artist), guid=None, album_guid=None)
       t.parts.append(f)
       albumTracks.append(t)
       #print 'Adding: [Artist: ' + artist + '] [Album: ' + album + '] [Title: ' + title + '] [Tracknumber: ' + str(track) + '] [Disk: ' + str(disc) + '] [Album Artist: ' + album_artist + '] [File: ' + f + ']'

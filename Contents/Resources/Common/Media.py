@@ -40,7 +40,7 @@ class Episode(MediaRoot):
     return "%s (season %s, episode: %s) => %s starting at %d" % (self.show, self.season, self.episode, self.parts, self.display_offset)
     
 class Track(MediaRoot):
-  def __init__(self, artist, album, title=None, index=None, year=None, disc=None, album_artist=None, guid=None, filename=None):
+  def __init__(self, artist, album, title=None, index=None, year=None, disc=None, album_artist=None, guid=None, album_guid=None):
     MediaRoot.__init__(self, 'Track')
     self.artist = artist
     self.album = album
@@ -51,10 +51,10 @@ class Track(MediaRoot):
     self.album_artist = album_artist
     self.title = ''
     self.guid = guid
-    self.filename = filename
+    self.album_guid = album_guid
     
   def __repr__(self):
-    return "%s (album: %s, track: %s, guid: %s, filename: %s) #%d => %s" % (self.artist, self.album, self.name, self.guid, self.filename, self.index, self.title)
+    return "%s (album: %s, track: %s, guid: %s, album_guid: %s) #%d => %s" % (self.artist, self.album, self.name, self.guid, self.album_guid, self.index, self.title)
     
 class Photo(MediaRoot):
   def __init__(self, title):
