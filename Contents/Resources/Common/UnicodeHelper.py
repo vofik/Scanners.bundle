@@ -17,3 +17,8 @@ def fixEncoding(theString, language=None):
     value = value.strip('\0')
 
   return value
+
+def toBytes(s):
+  try: s = unicode(s).encode('utf-8')
+  except: pass
+  return s
