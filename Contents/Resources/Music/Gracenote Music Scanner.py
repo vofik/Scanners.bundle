@@ -24,6 +24,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     args['tracks[%d].albumArtist' % i] = track.album_artist
     args['tracks[%d].album' % i]       = track.album
     args['tracks[%d].index' % i]       = track.index
+    args['lang']                       = language
 
   querystring = urllib.urlencode(args).replace('%5B','[').replace('%5D',']')
   url = 'http://127.0.0.1:32400/gracenote/search?fingerprint=1&' + querystring
@@ -62,7 +63,16 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       mediaList[index].guid = str(track.getAttribute('guid'))
 
       print 'parent guid: ' + track.getAttribute('parentGUID')
+<<<<<<< HEAD
       mediaList[index].album_guid = str(track.getAttribute('parentGUID'))
+=======
+      mediaList[index].album_guid = toBytes(track.getAttribute('parentGUID'))
+
+      print 'grandparent guid: ' + track.getAttribute('grandparentGUID')
+      mediaList[index].artist_guid = toBytes(track.getAttribute('grandparentGUID'))
+
+      print 'final hints: ' + str(mediaList[index])
+>>>>>>> Add language to search request, pass up artist_guid.
 
     except Exception, e:
       print str(e)
