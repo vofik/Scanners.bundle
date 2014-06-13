@@ -27,7 +27,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     args['lang']                       = language
 
   querystring = urllib.urlencode(args).replace('%5B','[').replace('%5D',']')
-  url = 'http://127.0.0.1:32400/gracenote/search?fingerprint=1&' + querystring
+  url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=1&' + querystring
   res = minidom.parse(urllib.urlopen(url))
 
   for track in res.getElementsByTagName('Track'):
