@@ -23,15 +23,23 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
   # Make sure we're looking at a leaf directory (no audio files below here).
   if subdirs:
-    print 'Found music files below this directory; doing expensive matching.'
+    print 'Found music files below this directory; won\'t attempt quick matching.'
     doQuickMatch = False
 
-  # Make sure we have reliable track indices for all files.
+  # Make sure we have reliable track indices for all files and there are no dupes.
   if files:
+    tracks = Utils.SparseList()
     for f in files:
-      if not re.match(r'^[0-9]{1,2}.*',os.path.split(f)[-1]):
-        print 'Couldn\'t find track indices in all filenames; doing expensive matching.'
+      try: 
+        index = re.search(r'^([0-9]{1,2}).*',os.path.split(f)[-1]).groups(0)[0]
+      except: 
         doQuickMatch = False
+        print 'Couldn\'t find track indices in all filenames; doing expensive matching.'
+      if tracks[int(index)]:
+        doQuickMatch = False
+        print 'Found duplicate track index: %d; doing expensive matching.' % int(index)
+      else:
+        tracks[int(index)] = True
 
     # Make sure we're not sitting in the section root.
     parentPath = os.path.split(files[0])[0]
@@ -60,7 +68,8 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       print 'Couldn\'t determine unique artist or album from parent or grandparent directories; doing expensive matching.'
       doQuickMatch = False
 
-    queryList = Utils.SparseList()
+    queryList = []
+    resultList = []
 
     # Directory looks clean, let's build a query list directly from info gleaned from file and directory names.
     if doQuickMatch:
@@ -69,51 +78,68 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
         try:
           filename = os.path.splitext(os.path.split(f)[1])[0]
           (head, index, title) = re.split(r'^([0-9]{1,2})', filename)
-          index = int(index)
           title = re.sub(r'[_\-\.]','',title).strip()
       
-          t = Media.Track(artist=artist, album=album, title=title, index=index)
+          t = Media.Track(artist=artist, album=album, title=title, index=int(index))
           t.parts.append(f)
 
-          print '\tAdding: %d - %s' % (index, title)
-          queryList[index] = t
+          print '\tAdding: %s - %s' % (index, title)
+          queryList.append(t)
 
         except Exception as e:
           print str(e)
       
-      lookup(queryList, mediaList, language)
+      lookup(queryList, resultList, language)
 
     # Otherwise, let's do old school directory crawling and tag reading for now (WiP).
     else:
       AudioFiles.Process(path, files, mediaList, subdirs, root)
       queryList = list(mediaList)
-      lookup(queryList, mediaList, language)
+      lookup(queryList, resultList, language)
 
+    # print 'query list: ' + str(queryList)
+    # print 'result list: ' + str(resultList)
+    # print 'media list: ' + str(mediaList)
 
-def lookup(queryList, mediaList, language=None, fingerprint=False, mixed=False):
-  # Run the Gracenote search and add the GNID hint if we get one.
+    for track in resultList:
+      mediaList.append(track)
+
+def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False):
+
+  # Build up the query with the contents of the query list.
   args = ''
+  parts = {}
   for i, track in enumerate(queryList):
-    if track:
-      args += '&tracks[%d].path=%s' % (i, quote(track.parts[0]))
-      args += '&tracks[%d].userData=%d' % (i, i)
-      args += '&tracks[%d].track=%s' % (i, quote(track.name))
-      args += '&tracks[%d].artist=%s' % (i, quote(track.artist))
-      if track.album_artist:
-        args += '&tracks[%d].albumArtist=%s' % (i, quote(track.album_artist))
-      args += '&tracks[%d].album=%s' % (i, quote(track.album))
+    
+    # We need to pass at least a path and an identifier for each track that we know about.
+    args += '&tracks[%d].path=%s' % (i, quote(track.parts[0],''))
+    args += '&tracks[%d].userData=%d' % (i, track.index)
+    
+    # Keep track of the identifier -> part mapping so we can reassemble later.
+    parts[track.index] = track.parts[0]
+    
+    if track.title:
+      args += '&tracks[%d].title=%s' % (i, quote(track.name,''))
+    if track.artist:
+      args += '&tracks[%d].artist=%s' % (i, quote(track.artist,''))
+    if track.album_artist:
+      args += '&tracks[%d].albumArtist=%s' % (i, quote(track.album_artist,''))
+    if track.album:
+      args += '&tracks[%d].album=%s' % (i, quote(track.album,''))
+    if track.index:
       args += '&tracks[%d].index=%s' % (i, track.index)
-      args += '&lang=%s' % language
 
   fingerprint = 1 if fingerprint else 0
   mixed = 1 if mixed else 0
-  url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d%s' % (fingerprint, mixed, args)
+  url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d%s&lang=%s' % (fingerprint, mixed, args, language)
+
   print 'Requesting: ' + url
   res = minidom.parse(urlopen(url))
   print 'Got result: \n' + res.toprettyxml()
-
+  # Add the results to the result list.
   for track in res.getElementsByTagName('Track'):
     try:
+<<<<<<< HEAD
 
       index = int(track.getAttribute('userData'))
 
@@ -156,5 +182,19 @@ def lookup(queryList, mediaList, language=None, fingerprint=False, mixed=False):
       print 'final hints: ' + str(mediaList[index])
 >>>>>>> Add language to search request, pass up artist_guid.
 
+=======
+      t = Media.Track(
+            index = int(track.getAttribute('userData')),
+            album = toBytes(track.getAttribute('parentTitle')),
+            artist = toBytes(track.getAttribute('originalTitle')),
+            title = toBytes(track.getAttribute('title')),
+            year = toBytes(track.getAttribute('year')),
+            album_artist = toBytes(track.getAttribute('grandparentTitle')),
+            guid = toBytes(track.getAttribute('guid')),
+            album_guid = toBytes(track.getAttribute('parentGUID')),
+            artist_guid = toBytes(track.getAttribute('grandparentGUID')))
+      t.parts.append(parts[int(track.getAttribute('userData'))])
+      resultList.append(t)
+>>>>>>> Fixes and more progress on fast scanning.
     except Exception, e:
       print str(e)
