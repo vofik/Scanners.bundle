@@ -3,10 +3,14 @@
 #
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 import AudioFiles
 import urllib
 =======
 import re, os.path
+=======
+import re, os.path, random
+>>>>>>> Don't rely on track indices for identifiers, take advantage of "mixedContent" matching in a couple of cases.
 from urllib import urlopen, quote
 >>>>>>> First steps toward optimizing GN scanner (WIP).
 from xml.dom import minidom
@@ -20,53 +24,61 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
   # Look at the files and determine whether we can do a quick match (minimal tag parsing).
   doQuickMatch = True
+  mixed = False
 
   # Make sure we're looking at a leaf directory (no audio files below here).
   if subdirs:
     print 'Found music files below this directory; won\'t attempt quick matching.'
     doQuickMatch = False
 
-  # Make sure we have reliable track indices for all files and there are no dupes.
   if files:
-    tracks = Utils.SparseList()
-    for f in files:
-      try: 
-        index = re.search(r'^([0-9]{1,2}).*',os.path.split(f)[-1]).groups(0)[0]
-      except: 
-        doQuickMatch = False
-        print 'Couldn\'t find track indices in all filenames; doing expensive matching.'
-      if tracks[int(index)]:
-        doQuickMatch = False
-        print 'Found duplicate track index: %d; doing expensive matching.' % int(index)
-      else:
-        tracks[int(index)] = True
 
     # Make sure we're not sitting in the section root.
     parentPath = os.path.split(files[0])[0]
     if parentPath == root:
-      print 'File(s) are in section root; doing expensive matching.'
+      print 'File(s) are in section root; doing expensive matching with mixed content.'
       doQuickMatch = False
+      mixed = True
 
-    # Try to extract artist and album from directory structure.
-    artist = None
-    album = None
+    # Make sure we have reliable track indices for all files and there are no dupes.
+    tracks = Utils.SparseList()
+    for f in files:
+      try: 
+        index = re.search(r'^([0-9]{1,2}).*',os.path.split(f)[-1]).groups(0)[0]
+      except:
+        doQuickMatch = False
+        print 'Couldn\'t find track indices in all filenames; doing expensive matching.'
+        break
+      if tracks[int(index)]:
+        doQuickMatch = False
+        mixed = True
+        print 'Found duplicate track index: %d; doing expensive matching with mixed content.' % int(index)
+        break
+      else:
+        tracks[int(index)] = True
 
-    # First, see if we have a a parent that follows the 'artist - album' convention.  Stuff in square brackets tends to be junk.
-    parent = os.path.split(parentPath)[1]
-    if ' - ' in parent:
-      artist = parent.split(' - ')[0]
-      album = re.sub('\[.*\]', '', parent.split(' - ')[1])
+    if doQuickMatch:
+      
+      # Try to extract artist and album from directory structure.
+      artist = None
+      album = None
 
-    # If we have a grandparent directory that's not the section root or VA, use parent for album and grandparent for artist.
-    else:
-      grandparentPath = os.path.split(parentPath)[0]
-      if grandparentPath != root and os.path.split(grandparentPath)[1] != 'Various Artists':
-        artist = os.path.split(grandparentPath)[1]
-        album = re.sub('\[.*\]', '', parent)
-    
-    if not artist or not album:
-      print 'Couldn\'t determine unique artist or album from parent or grandparent directories; doing expensive matching.'
-      doQuickMatch = False
+      # First, see if we have a a parent that follows the 'artist - album' convention.  Stuff in square brackets tends to be junk.
+      parent = os.path.split(parentPath)[1]
+      if ' - ' in parent:
+        artist = parent.split(' - ')[0]
+        album = re.sub('\[.*\]', '', parent.split(' - ')[1])
+
+      # If we have a grandparent directory that's not the section root or VA, use parent for album and grandparent for artist.
+      else:
+        grandparentPath = os.path.split(parentPath)[0]
+        if grandparentPath != root and os.path.split(grandparentPath)[1] != 'Various Artists':
+          artist = os.path.split(grandparentPath)[1]
+          album = re.sub('\[.*\]', '', parent)
+      
+      if not artist or not album:
+        print 'Couldn\'t determine unique artist or album from parent or grandparent directories; doing expensive matching.'
+        doQuickMatch = False
 
     queryList = []
     resultList = []
@@ -95,7 +107,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     else:
       AudioFiles.Process(path, files, mediaList, subdirs, root)
       queryList = list(mediaList)
-      lookup(queryList, resultList, language)
+      lookup(queryList, resultList, language, mixed)
 
     # print 'query list: ' + str(queryList)
     # print 'result list: ' + str(resultList)
@@ -113,10 +125,11 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
     
     # We need to pass at least a path and an identifier for each track that we know about.
     args += '&tracks[%d].path=%s' % (i, quote(track.parts[0],''))
-    args += '&tracks[%d].userData=%d' % (i, track.index)
+    ident = random.randrange(16**8)
+    args += '&tracks[%d].userData=%d' % (i, ident)
     
     # Keep track of the identifier -> part mapping so we can reassemble later.
-    parts[track.index] = track.parts[0]
+    parts[ident] = track.parts[0]
     
     if track.title:
       args += '&tracks[%d].title=%s' % (i, quote(track.name,''))
