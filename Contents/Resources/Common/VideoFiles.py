@@ -8,7 +8,8 @@ video_exts = ['3g2', '3gp', 'asf', 'asx', 'avc', 'avi', 'avs', 'bivx', 'bup', 'd
 
 ignore_samples = ['[-\._ ]sample', 'sample[-\._ ]']
 ignore_trailers = ['-trailer\.']
-ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*', 'bdmv', 'video_ts']
+ignore_extras = ['-deleted\.', '-behindthescenes\.', '-interview\.', '-scene\.']
+ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*', 'bdmv', 'video_ts', '^interview.?$', '^scene.?$', '^trailer.?$', '^deleted.?(scene.?)?$', '^behind.?the.?scenes$']
 ignore_suffixes = ['.dvdmedia']
 
 source_dict = {'bluray':['bdrc','bdrip','bluray','bd','brrip','hdrip','hddvd','hddvdrip'],'cam':['cam'],'dvd':['ddc','dvdrip','dvd','r1','r3','r5'],'retail':['retail'],
@@ -160,6 +161,11 @@ def Scan(path, files, mediaList, subdirs, root=None):
 
     # Remove trailer files.
     for rx in ignore_trailers:
+      if re.search(rx, i, re.IGNORECASE):
+        filesToRemove.append(i)
+
+    # Remove things that look like extras.
+    for rx in ignore_extras:
       if re.search(rx, i, re.IGNORECASE):
         filesToRemove.append(i)
         
