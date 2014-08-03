@@ -142,15 +142,8 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None, **kwargs):
       if mediaList[0].source is None:
         mediaList[0].source = VideoFiles.RetrieveSource(path)
          
-  # If the subdirectories indicate that we're inside a DVD, when whack things other than audio and video.
-  whack = []
-  if 'video_ts' in [Utils.SplitPath(s)[-1].lower() for s in subdirs]:
-    for dir in subdirs:
-      d = os.path.basename(dir).lower()
-      if d not in ['video_ts', 'audio_ts']:
-        whack.append(dir)
-  
   # Finally, if any of the subdirectories match a TV show, don't enter!
+  whack = []
   for dir in subdirs:
     for rx in standalone_tv_regexs:
       res = re.findall(rx, dir)
