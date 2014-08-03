@@ -9,6 +9,7 @@ video_exts = ['3g2', '3gp', 'asf', 'asx', 'avc', 'avi', 'avs', 'bivx', 'bup', 'd
 ignore_samples = ['[-\._ ]sample', 'sample[-\._ ]']
 ignore_trailers = ['-trailer\.']
 ignore_extras = ['-deleted\.', '-behindthescenes\.', '-interview\.', '-scene\.']
+ignore_extras_startswith = ['^trailer.*','^movie-trailer.*']
 ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*', 'bdmv', 'video_ts', '^interview.?$', '^scene.?$', '^trailer.?$', '^deleted.?(scene.?)?$', '^behind.?the.?scenes$']
 ignore_suffixes = ['.dvdmedia']
 
@@ -167,6 +168,13 @@ def Scan(path, files, mediaList, subdirs, root=None):
     # Remove things that look like extras.
     for rx in ignore_extras:
       if re.search(rx, i, re.IGNORECASE):
+        filesToRemove.append(i)
+
+    # Remove things that start with certain patterns.
+    fn = os.path.basename(i)
+    for rx in ignore_extras_startswith:
+      if re.search(rx, fn, re.IGNORECASE):
+        print 'whacking: ' + i
         filesToRemove.append(i)
         
   # Uniquify and remove.
