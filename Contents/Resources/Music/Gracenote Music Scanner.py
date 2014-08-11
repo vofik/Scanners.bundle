@@ -148,7 +148,7 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
 
   print 'Requesting: ' + url
   res = minidom.parse(urlopen(url))
-  print 'Got result: \n' + res.toprettyxml()
+  print 'Got result: \n' + toBytes(res.toprettyxml())
   # Add the results to the result list.
   for track in res.getElementsByTagName('Track'):
     try:
@@ -197,7 +197,7 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
 
 =======
       t = Media.Track(
-            index = int(track.getAttribute('userData')),
+            index = int(track.getAttribute('index')),
             album = toBytes(track.getAttribute('parentTitle')),
             artist = toBytes(track.getAttribute('originalTitle')),
             title = toBytes(track.getAttribute('title')),
