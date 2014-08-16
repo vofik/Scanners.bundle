@@ -25,7 +25,7 @@ for d in source_dict:
 audio = ['([^0-9])5\.1[ ]*ch(.)','([^0-9])5\.1([^0-9]?)','([^0-9])7\.1[ ]*ch(.)','([^0-9])7\.1([^0-9])']
 subs = ['multi','multisubs']
 misc = ['cd1','cd2','1cd','2cd','custom','internal','repack','read.nfo','readnfo','nfofix','proper','rerip','dubbed','subbed','extended','unrated','xxx','nfo','dvxa']
-format = ['ac3','dc','divx','fragment','limited','ogg','ogm','ntsc','pal','ps3avchd','r1','r3','r5','720i','720p','1080i','1080p','remux','x264','xvid','vorbis','aac','dts','fs','ws','1920x1080','1280x720','h264']
+format = ['ac3','dc','divx','fragment','limited','ogg','ogm','ntsc','pal','ps3avchd','r1','r3','r5','720i','720p','1080i','1080p','remux','x264','xvid','vorbis','aac','dts','fs','ws','1920x1080','1280x720','h264','h','264','prores']
 edition = ['dc','se'] # dc = directors cut, se = special edition
 yearRx = '([\(\[\.\-])([1-2][0-9]{3})([\.\-\)\]_,+])'
 
@@ -119,8 +119,13 @@ def CleanName(name):
     
     if good and numBad < 2:
       if newTokens[i] == '*yearBreak*':
-        #if we have a year, we can ignore everything after this.
-        break
+        # If the year token is first just skip it and keep reading,
+        # otherwise we can ignore everything after it.
+        #
+        if i == 0:
+          continue
+        else:
+          break
       else:
         finalTokens.append(newTokens[i])
     elif not good and newTokens[i].lower() == 'dc':
