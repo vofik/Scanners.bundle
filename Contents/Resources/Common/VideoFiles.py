@@ -146,7 +146,15 @@ def CleanName(name):
   #print "FINAL:  ", finalTokens
   
   cleanedName = ' '.join(finalTokens)
-  cleanedName = cleanedName.encode('utf-8')
+  
+  # If we failed to decode/encode above, we may still be dealing with a non-ASCII string here,
+  # which will raise if we try to encode it, so let's just handle it and hope for the best!
+  #
+  try:
+    cleanedName = cleanedName.encode('utf-8')
+  except:
+    pass
+  
   return (titlecase.titlecase(cleanedName), year)
 
 # Remove files that aren't videos.
