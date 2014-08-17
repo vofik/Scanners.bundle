@@ -176,16 +176,12 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
             try: title = find_data(mp4fileTags, 'moov/udta/meta/ilst/title').encode('utf-8')
             except: pass
               
-            # Year.
-            try: m4year = int(find_data(mp4fileTags, 'moov/udta/meta/ilst/year')[:4])
-            except: pass
-            
-            if year and m4year == 0:
-              m4year = year
+            # Note: Dates/years embedded in episode files tend to be air or "recorded on" dates, which can 
+            # mislead the agent when doing series matching, so we will no longer pass those up as hints here.
 
             # If we have all the data we need, add it.
             if len(m4show) > 0 and m4season > 0 and m4ep > 0:
-              tv_show = Media.Episode(m4show, m4season, m4ep, title, m4year)
+              tv_show = Media.Episode(m4show, m4season, m4ep, title, year)
               tv_show.parts.append(i)
               mediaList.append(tv_show)
               continue
