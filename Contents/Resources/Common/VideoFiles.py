@@ -183,12 +183,12 @@ def Scan(path, files, mediaList, subdirs, root=None):
       if re.search(rx, i, re.IGNORECASE):
         filesToRemove.append(i)
 
-    # Remove things that start with certain patterns.
-    fn = os.path.basename(i)
-    for rx in ignore_extras_startswith:
-      if re.search(rx, fn, re.IGNORECASE):
-        print 'whacking: ' + i
-        filesToRemove.append(i)
+    # Remove things that start with certain extras patterns, but not at the top level.
+    if len(path) > 0:
+      fn = os.path.basename(i)
+      for rx in ignore_extras_startswith:
+        if re.search(rx, fn, re.IGNORECASE):
+          filesToRemove.append(i)
         
   # Uniquify and remove.
   filesToRemove = list(set(filesToRemove))
