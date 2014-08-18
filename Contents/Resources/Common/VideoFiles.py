@@ -8,8 +8,8 @@ video_exts = ['3g2', '3gp', 'asf', 'asx', 'avc', 'avi', 'avs', 'bivx', 'bup', 'd
 
 ignore_samples = ['[-\._]sample', 'sample[-\._]']
 ignore_trailers = ['-trailer\.']
-ignore_extras = ['-deleted\.', '-behindthescenes\.', '-interview\.', '-scene\.']
-ignore_extras_startswith = ['^trailer.*','^movie-trailer.*']
+ignore_extras = ['^trailer.?$','-deleted\.', '-behindthescenes\.', '-interview\.', '-scene\.']
+ignore_extras_startswith = ['^movie-trailer.*']
 ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*', 'bdmv', 'video_ts', '^interview.?$', '^scene.?$', '^trailer.?$', '^deleted.?(scene.?)?$', '^behind.?the.?scenes$']
 ignore_suffixes = ['.dvdmedia']
 
@@ -183,12 +183,11 @@ def Scan(path, files, mediaList, subdirs, root=None):
       if re.search(rx, i, re.IGNORECASE):
         filesToRemove.append(i)
 
-    # Remove things that start with certain extras patterns, but not at the top level.
-    if len(path) > 0:
-      fn = os.path.basename(i)
-      for rx in ignore_extras_startswith:
-        if re.search(rx, fn, re.IGNORECASE):
-          filesToRemove.append(i)
+    # Remove things that start with certain extras patterns.
+    fn = os.path.basename(i)
+    for rx in ignore_extras_startswith:
+      if re.search(rx, fn, re.IGNORECASE):
+        filesToRemove.append(i)
         
   # Uniquify and remove.
   filesToRemove = list(set(filesToRemove))
