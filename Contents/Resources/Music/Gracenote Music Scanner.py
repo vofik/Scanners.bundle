@@ -108,6 +108,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       AudioFiles.Process(path, files, mediaList, subdirs, root)
       queryList = list(mediaList)
       lookup(queryList, resultList, language, mixed)
+      del mediaList[:]
 
     # print 'query list: ' + str(queryList)
     # print 'result list: ' + str(resultList)
@@ -145,10 +146,8 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
   fingerprint = 1 if fingerprint else 0
   mixed = 1 if mixed else 0
   url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d%s&lang=%s' % (fingerprint, mixed, args, language)
-
-  print 'Requesting: ' + url
   res = minidom.parse(urlopen(url))
-  print 'Got result: \n' + toBytes(res.toprettyxml())
+
   # Add the results to the result list.
   for track in res.getElementsByTagName('Track'):
     try:
