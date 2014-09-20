@@ -106,14 +106,10 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       AudioFiles.Process(path, files, mediaList, subdirs, root)
       queryList = list(mediaList)
       lookup(queryList, resultList, language, mixed)
-      del mediaList[:]
 
-    # print 'query list: ' + str(queryList)
-    # print 'result list: ' + str(resultList)
-    # print 'media list: ' + str(mediaList)
-
-    for track in resultList:
-      mediaList.append(track)
+    del mediaList[:]
+    for result in resultList:
+      mediaList.append(result)
 
 def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False):
 
@@ -124,14 +120,15 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
     
     # We need to pass at least a path and an identifier for each track that we know about.
     args += '&tracks[%d].path=%s' % (i, quote(track.parts[0],''))
-    ident = random.randrange(16**8)
-    args += '&tracks[%d].userData=%d' % (i, ident)
+    args += '&tracks[%d].userData=%d' % (i, i)
     
     # Keep track of the identifier -> part mapping so we can reassemble later.
-    parts[ident] = track.parts[0]
-    
+    parts[i] = track.parts[0]
+
+    if track.name:
+      args += '&tracks[%d].title=%s' % (i, quote(track.name,''))    
     if track.title:
-      args += '&tracks[%d].title=%s' % (i, quote(track.name,''))
+      args += '&tracks[%d].title=%s' % (i, quote(track.title,''))
     if track.artist:
       args += '&tracks[%d].artist=%s' % (i, quote(track.artist,''))
     if track.album_artist:
@@ -149,20 +146,27 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
   except Exception, e:
     Log('Error parsing Gracenote response: ' + str(e))
 
-  # Add the results to the result list.
-  for track in res.getElementsByTagName('Track'):
-    try:
-      t = Media.Track(
-            index = int(track.getAttribute('index')),
-            album = toBytes(track.getAttribute('parentTitle')),
-            artist = toBytes(track.getAttribute('originalTitle')),
-            title = toBytes(track.getAttribute('title')),
-            year = toBytes(track.getAttribute('year')),
-            album_artist = toBytes(track.getAttribute('grandparentTitle')),
-            guid = toBytes(track.getAttribute('guid')),
-            album_guid = toBytes(track.getAttribute('parentGUID')),
-            artist_guid = toBytes(track.getAttribute('grandparentGUID')))
-      t.parts.append(parts[int(track.getAttribute('userData'))])
-      resultList.append(t)
-    except Exception, e:
-      Log('Error adding track: ' + str(e))
+  # See which tracks we got matches for.
+  matched_tracks = {track.getAttribute('userData'): track for track in res.getElementsByTagName('Track')}
+
+  # Add Gracenote results to the resultList where we have them.
+  for i, query_track in enumerate(queryList):
+    if str(i) in matched_tracks:
+      try:
+        track = matched_tracks[str(i)]
+        t = Media.Track(
+              index = int(track.getAttribute('index')),
+              album = toBytes(track.getAttribute('parentTitle')),
+              artist = toBytes(track.getAttribute('originalTitle')),
+              title = toBytes(track.getAttribute('title')),
+              year = toBytes(track.getAttribute('year')),
+              album_artist = toBytes(track.getAttribute('grandparentTitle')),
+              guid = toBytes(track.getAttribute('guid')),
+              album_guid = toBytes(track.getAttribute('parentGUID')),
+              artist_guid = toBytes(track.getAttribute('grandparentGUID')))
+        t.parts.append(parts[int(track.getAttribute('userData'))])
+        resultList.append(t)
+      except Exception, e:
+        Log('Error adding track: ' + str(e))
+    else:
+      resultList.append(query_track)
