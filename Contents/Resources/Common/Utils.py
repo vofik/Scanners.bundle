@@ -1,4 +1,5 @@
 import os
+from urllib import urlopen, urlencode
 
 # Platform-safe function to split a path into a list of path elements.
 def SplitPath(path, maxdepth=20):
@@ -25,3 +26,8 @@ class SparseList(list):
   def __getitem__(self, index):
     try: return list.__getitem__(self, index)
     except IndexError: return None
+
+# Log to PMS log.
+def Log(message, level=3, source='Scanners.bundle'):
+  args = urlencode({'message' : message, 'level' : level, 'source' : source})
+  res = urlopen('http://127.0.0.1:32400/log?%s' % args)
