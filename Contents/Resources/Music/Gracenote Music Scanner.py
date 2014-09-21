@@ -166,6 +166,13 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
     if str(i) in matched_tracks:
       try:
         track = matched_tracks[str(i)]
+
+        # If the track index changed, consider this a bad sign that something went wrong during fingerprint matching and abort.
+        if track.getAttribute('index') != query_track.index:
+          Log('Track index changed in match result (%s -> %s), using local hints.' % (query_track.index, track.getAttribute('index')))
+          resultList.append(query_track)
+          continue
+
         t = Media.Track(
               index = int(track.getAttribute('index')),
               album = toBytes(track.getAttribute('parentTitle')),
@@ -181,8 +188,10 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
               artist_guid = toBytes(track.getAttribute('grandparentGUID')))
         t.parts.append(parts[int(track.getAttribute('userData'))])
         resultList.append(t)
+
       except Exception, e:
         Log('Error adding track: ' + str(e))
+
     else:
       Log('Didn\'t get a track match for %s at path: %s, using local hints.' % ((query_track.title or query_track.name), query_track.parts[0]))
       resultList.append(query_track)
