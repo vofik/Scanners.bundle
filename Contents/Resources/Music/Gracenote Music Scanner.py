@@ -104,13 +104,13 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
         except Exception as e:
           Log('Error preparing tracks for quick matching: ' + str(e))
       
-      lookup(queryList, resultList, language)
+      lookup(queryList, resultList, language=language)
 
     # Otherwise, let's do old school directory crawling and tag reading for now (WiP).
     else:
       AudioFiles.Process(path, files, mediaList, subdirs, root)
       queryList = list(mediaList)
-      lookup(queryList, resultList, language, mixed)
+      lookup(queryList, resultList, language=language, fingerprint=True, mixed=mixed)
 
     del mediaList[:]
     for result in resultList:
