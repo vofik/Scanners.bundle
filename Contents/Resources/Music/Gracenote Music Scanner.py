@@ -153,7 +153,15 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
 
   # See which tracks we got matches for.
   matched_tracks = {track.getAttribute('userData'): track for track in res.getElementsByTagName('Track')}
-
+  
+  # If we didn't match all tracks, redo with fingerprinting. We should also probably redo
+  # if we matched different albums/artists. Just in case.
+  #
+  if len(matched_tracks) < len(queryList) and fingerprint == False:
+    Log('Didn\'t match all tracks, re-running with fingerprints.')
+    lookup(queryList, resultList, language, True, mixed)
+    return
+    
   # Add Gracenote results to the resultList where we have them.
   for i, query_track in enumerate(queryList):
     if str(i) in matched_tracks:
