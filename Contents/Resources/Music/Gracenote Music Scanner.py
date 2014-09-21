@@ -164,6 +164,8 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
               album = toBytes(track.getAttribute('parentTitle')),
               artist = toBytes(track.getAttribute('originalTitle')),
               title = toBytes(track.getAttribute('title')),
+              album_thumb_url = toBytes(track.getAttribute('parentThumb')),
+              artist_thumb_url = toBytes(track.getAttribute('grandparentThumb')),
               year = toBytes(track.getAttribute('year')),
               album_artist = toBytes(track.getAttribute('grandparentTitle')),
               guid = toBytes(track.getAttribute('guid')),
