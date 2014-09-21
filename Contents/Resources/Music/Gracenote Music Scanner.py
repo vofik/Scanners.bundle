@@ -130,10 +130,8 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
     # Keep track of the identifier -> part mapping so we can reassemble later.
     parts[i] = track.parts[0]
 
-    if track.name:
-      args += '&tracks[%d].title=%s' % (i, quote(track.name,''))    
     if track.title:
-      args += '&tracks[%d].title=%s' % (i, quote(track.title,''))
+      args += '&tracks[%d].title=%s' % (i, quote((track.title or track.name),''))
     if track.artist:
       args += '&tracks[%d].artist=%s' % (i, quote(track.artist,''))
     if track.album_artist:
@@ -145,6 +143,7 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
 
   fingerprint = 1 if fingerprint else 0
   mixed = 1 if mixed else 0
+  Log('Running Gracenote match with fingerprinting: %d and mixedContent: %d' % (fingerprint, mixed))
   url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d%s&lang=%s' % (fingerprint, mixed, args, language)
   try:
     res = minidom.parse(urlopen(url))
@@ -153,12 +152,12 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
 
   # See which tracks we got matches for.
   matched_tracks = {track.getAttribute('userData'): track for track in res.getElementsByTagName('Track')}
-  
-  # If we didn't match all tracks, redo with fingerprinting. We should also probably redo
-  # if we matched different albums/artists. Just in case.
-  #
-  if len(matched_tracks) < len(queryList) and fingerprint == False:
-    Log('Didn\'t match all tracks, re-running with fingerprints.')
+
+  # If we didn't match all tracks, or we got mixed artists/albums, redo with fingerprinting.
+  unique_artists = len(set([t[1].getAttribute('grandparentTitle') for t in matched_tracks.items()]))
+  unique_albums = len(set([t[1].getAttribute('parentTitle') for t in matched_tracks.items()]))
+  if (len(matched_tracks) < len(queryList) or unique_artists > 1 or unique_albums > 1) and fingerprint == False and mixed == False:
+    Log('Found %d unique artist(s) and %d unique album(s); matched %d of %d tracks.  Re-running with fingerprinting.' % (unique_artists, unique_albums, len(res.getElementsByTagName('Track')), len(queryList)))
     lookup(queryList, resultList, language, True, mixed)
     return
     
@@ -185,4 +184,5 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
       except Exception, e:
         Log('Error adding track: ' + str(e))
     else:
+      Log('Didn\'t get a track match for %s at path: %s, using local hints.' % ((query_track.title or query_track.name), query_track.parts[0]))
       resultList.append(query_track)
