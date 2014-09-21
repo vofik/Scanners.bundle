@@ -88,7 +88,12 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
         try:
           filename = os.path.splitext(os.path.split(f)[1])[0]
           (head, index, title) = re.split(r'^([0-9]{1,2})', filename)
-          title = re.sub(r'[_\-\.]','',title).strip()
+
+          # Remove any remaining track-index-related cruft from the head of the track title.
+          title = re.sub(r'^[\W\-]+', '', title).strip()
+
+          # Replace underscores and dots with spaces.
+          title = re.sub(r'[_\. ]+', ' ', title)
       
           t = Media.Track(artist=artist, album=album, title=title, index=int(index))
           t.parts.append(f)
