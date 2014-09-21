@@ -94,6 +94,9 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
           # Replace underscores and dots with spaces.
           title = re.sub(r'[_\. ]+', ' ', title)
+
+          # Things in parens seem to confuse Gracenote, so let's strip them out.
+          title = re.sub(r' ?\(.*\)', '', title)
       
           t = Media.Track(artist=artist, album=album, title=title, index=int(index))
           t.parts.append(f)
@@ -168,7 +171,7 @@ def lookup(queryList, resultList, language=None, fingerprint=False, mixed=False)
         track = matched_tracks[str(i)]
 
         # If the track index changed, consider this a bad sign that something went wrong during fingerprint matching and abort.
-        if track.getAttribute('index') != query_track.index:
+        if int(track.getAttribute('index') or -1) != query_track.index:
           Log('Track index changed in match result (%s -> %s), using local hints.' % (query_track.index, track.getAttribute('index')))
           resultList.append(query_track)
           continue
