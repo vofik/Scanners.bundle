@@ -10,8 +10,20 @@ from mutagen.easyid3 import EasyID3
 from mutagen.easymp4 import EasyMP4
 from mutagen.asf import ASF
 
-audio_exts = ['mp3', 'm4p', 'm4a', 'm4b', 'flac', 'aac', 'rm', 'rma', 'mpa', 'wav', 'wma', 'ogg', 'mp2', 
+audio_exts = ['mp3', 'm4a', 'm4b', 'flac', 'aac', 'rm', 'rma', 'mpa', 'wav', 'wma', 'ogg', 'mp2', 
               'ac3', 'dts', 'ape', 'mpc', 'mp+', 'mpp', 'shn', 'oga', 'aiff', 'aif']
+various_artists = ['va', 'v/a', 'various', 'various artists', 'various artist(s)', 'various artitsen', 'verschiedene']
+langDecodeMap = {'ko': ['euc_kr','cp949']}
+
+# Unicode control characters can appear in ID3v2 tags but are not legal in XML.
+RE_UNICODE_CONTROL =  u'([\u0000-\u0008\u000b-\u000c\u000e-\u001f\ufffe-\uffff])' + \
+                      u'|' + \
+                      u'([%s-%s][^%s-%s])|([^%s-%s][%s-%s])|([%s-%s]$)|(^[%s-%s])' % \
+                      (
+                        unichr(0xd800),unichr(0xdbff),unichr(0xdc00),unichr(0xdfff),
+                        unichr(0xd800),unichr(0xdbff),unichr(0xdc00),unichr(0xdfff),
+                        unichr(0xd800),unichr(0xdbff),unichr(0xdc00),unichr(0xdfff)
+                      )
 
 # Remove files that aren't audios.
 def Scan(path, files, mediaList, subdirs, root=None):
