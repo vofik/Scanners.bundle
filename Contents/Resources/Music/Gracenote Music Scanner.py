@@ -10,6 +10,7 @@ from xml.dom import minidom
 import Media, AudioFiles, Utils
 from Utils import SparseList, Log
 from UnicodeHelper import toBytes
+import mutagen
 
 def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
@@ -55,48 +56,68 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       else:
         tracks[int(index)] = True
 
+    artist = None
+    album = None
+
     if doQuickMatch:
       
-      # Try to extract artist and album from directory structure.
-      artist = None
-      album = None
+      # See if we have some consensus on artist/album by reading a few tags.
+      for i in range(3):
+        if i < len(files):
+          tags = mutagen.File(files[i], easy=True)
 
-      # First, see if we have a a parent that follows the 'artist - album' convention.  Stuff in square brackets tends to be junk.
-      parent = os.path.split(parentPath)[1]
-      if ' - ' in parent:
-        artist = parent.split(' - ')[0]
-        album = re.sub('\[.*\]', '', parent.split(' - ')[1])
+          this_artist = tags['artist'][0] if 'artist' in tags else tags['albumartist'][0] if 'albumartist' in tags else tags['TPE2'][0] if 'TPE2' in tags else None
+          this_album = tags['album'][0] if 'album' in tags else None
 
-      # If we have a grandparent directory that's not the section root or VA, use parent for album and grandparent for artist.
-      else:
-        grandparentPath = os.path.split(parentPath)[0]
-        if grandparentPath != root and os.path.split(grandparentPath)[1] != 'Various Artists':
-          artist = os.path.split(grandparentPath)[1]
-          album = re.sub('\[.*\]', '', parent)
+          if artist and artist != this_artist:
+            Log('Found different artists in tags (%s vs. %s); doing expensive matching.' % (artist, this_artist))
+            doQuickMatch = False
+            break
+
+          if album and album != this_album:
+            Log('Found different albums in tags (%s vs. %s); doing expensive matching.' % (artist, this_artist))
+            doQuickMatch = False
+            break
+
+          artist = this_artist
+          album = this_album
       
       if not artist or not album:
-        Log('Couldn\'t determine unique artist or album from parent or grandparent directories; doing expensive matching.')
+        Log('Couldn\'t determine unique artist or album from tags; doing expensive matching.')
         doQuickMatch = False
 
     queryList = []
     resultList = []
 
-    # Directory looks clean, let's build a query list directly from info gleaned from file and directory names.
+    # Directory looks clean, let's build a query list directly from info gleaned from file names.
     if doQuickMatch:
       Log('Building query list for quickmatch with artist: %s, album: %s' % (artist, album))
+
+      # Determine if the artist and/or album appears in all filenames, since we'll want to strip these out for clean titles.
+      strip_artist = True if len([f for f in files if artist in os.path.basename(f)]) == len(files) else False
+      strip_album = True if len([f for f in files if album in os.path.basename(f)]) == len(files) else False
+
       for f in files:
         try:
           filename = os.path.splitext(os.path.split(f)[1])[0]
           (head, index, title) = re.split(r'^([0-9]{1,2})', filename)
-
-          # Remove any remaining track-index-related cruft from the head of the track title.
-          title = re.sub(r'^[\W\-]+', '', title).strip()
 
           # Replace underscores and dots with spaces.
           title = re.sub(r'[_\. ]+', ' ', title)
 
           # Things in parens seem to confuse Gracenote, so let's strip them out.
           title = re.sub(r' ?\(.*\)', '', title)
+
+          # Remove artist name from title if it appears in all of them.
+          if strip_artist:
+            title = title.replace(artist, '')
+
+          # Remove album title from title if it appears in all of them.
+          if strip_album:
+            title = title.replace(album, '')
+
+          # Remove any remaining index-, artist-, and album-related cruft from the head of the track title.
+          title = re.sub(r'^[\W\-]+', '', title).strip()
       
           t = Media.Track(artist=artist, album=album, title=title, index=int(index))
           t.parts.append(f)
