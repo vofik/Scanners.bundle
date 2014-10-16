@@ -7,10 +7,12 @@ import urllib
 import re, os.path, random
 from urllib import urlopen, quote
 from xml.dom import minidom
+from collections import Counter
 import Media, AudioFiles, Utils
 from Utils import SparseList, Log
 from UnicodeHelper import toBytes
 import mutagen
+from hashlib import sha1
 
 DEBUG = True
 
@@ -121,7 +123,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
           # Remove any remaining index-, artist-, and album-related cruft from the head of the track title.
           title = re.sub(r'^[\W\-]+', '', title).strip()
       
-          t = Media.Track(artist=artist, album_artist=artist, album=album, title=title, index=int(index))
+          t = Media.Track(artist=artist, album=album, title=title, index=int(index))
           t.parts.append(f)
 
           Log('\tAdding: %s - %s' % (index, title))
@@ -156,7 +158,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     # Keep track of the identifier -> part mapping so we can reassemble later.
     parts[i] = track.parts[0]
 
-    if track.title:
+    if track.name:
       args += '&tracks[%d].title=%s' % (i, quote((track.title or track.name),''))
     if track.artist and track.artist != 'Various Artists':
       args += '&tracks[%d].artist=%s' % (i, quote(track.artist,''))
@@ -194,7 +196,13 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     Log('Re-running with fingerprinting.')
     lookup(query_list, result_list, language, True, mixed)
     return
-    
+  
+  # Look through the results and determine some consensus metadata so we can do a better job of keeping rogue and unmatched tracks together.
+  artist_consensus = Counter([(t[1].getAttribute('grandparentGUID'), t[1].getAttribute('grandparentTitle'), t[1].getAttribute('grandparentThumb')) for t in matched_tracks.items()]).most_common()[0][0]
+  album_consensus = Counter([(t[1].getAttribute('parentGUID'), t[1].getAttribute('parentTitle'), t[1].getAttribute('parentThumb')) for t in matched_tracks.items()]).most_common()[0][0]
+  year_consensus = Counter([t[1].getAttribute('year') for t in matched_tracks.items()]).most_common()[0][0]
+  consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
+  
   # Add Gracenote results to the result_list where we have them.
   for i, query_track in enumerate(query_list):
     if str(i) in matched_tracks:
@@ -202,45 +210,75 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         track = matched_tracks[str(i)]
 
         # If the track index changed, and we didn't perfectly match everything, consider this a bad sign that something went wrong during fingerprint matching and abort.
-        if query_track.index and int(track.getAttribute('index') or -1) != query_track.index and (len(matched_tracks) < len(query_list) or unique_albums > 1):
-          Log('Track index changed (%s -> %s) and match was not perfect, using local hints.' % (query_track.index, track.getAttribute('index')))
-          if DEBUG:
-            query_track.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album_match.png'
-            query_track.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist_match.png'
-          result_list.append(query_track)
+        if query_track.index and int(track.getAttribute('index') or -1) != query_track.index and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
+          Log('Track index changed (%s -> %s) and match was not perfect, using merged hints.' % (query_track.index, track.getAttribute('index')))
+          result_list.append(merge_hints(query_track, consensus_track, parts[i]))
           continue
 
         t = Media.Track(
               index = int(track.getAttribute('index')),
               album = toBytes(track.getAttribute('parentTitle')),
-              artist = toBytes(track.getAttribute('originalTitle')),
+              artist = toBytes(track.getAttribute('originalTitle') or track.getAttribute('grandparentTitle')),
               title = toBytes(track.getAttribute('title')),
               disc = toBytes(track.getAttribute('parentIndex')),
               album_thumb_url = toBytes(track.getAttribute('parentThumb')),
               artist_thumb_url = toBytes(track.getAttribute('grandparentThumb')),
               year = toBytes(track.getAttribute('year')),
-              album_artist = toBytes(track.getAttribute('grandparentTitle')),
               guid = toBytes(track.getAttribute('guid')),
               album_guid = toBytes(track.getAttribute('parentGUID')),
               artist_guid = toBytes(track.getAttribute('grandparentGUID')))
 
+        # Set the album_artist if we got a track artist and it differs from the album's primary contributor.
+        if track.getAttribute('originalTitle') and track.getAttribute('grandparentTitle') != t.artist:
+          t.album_artist = toBytes(track.getAttribute('grandparentTitle'))
+
+        t.parts.append(parts[int(track.getAttribute('userData'))])
+
         if DEBUG:
-          t.artist = t.artist + ' [GN MATCH]'
-          t.title = t.title + ' [GN MATCH]'
+          t.name = t.name + ' [GN MATCH]'
           if t.album_thumb_url == 'http://':
             t.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album.png'
           if t.artist_thumb_url == 'http://':
             t.artist_thumb_url == 'https://dl.dropboxusercontent.com/u/8555161/no_artist.png'
+          Log('Adding matched track: ' + str(t))
 
-        t.parts.append(parts[int(track.getAttribute('userData'))])
         result_list.append(t)
 
       except Exception, e:
         Log('Error adding track: ' + str(e))
 
     else:
-      Log('Didn\'t get a track match for %s at path: %s, using local hints.' % ((query_track.title or query_track.name), query_track.parts[0]))
-      if DEBUG:
-        query_track.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album_match.png'
-        query_track.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist_match.png'
-      result_list.append(query_track)
+      Log('Didn\'t get a track match for %s at path: %s' % ((query_track.title or query_track.name), query_track.parts[0]))
+            
+      if unique_albums == 1 and unique_artists == 1:
+        Log('Other positive Gracenote matches were all from the same artist and album (%s, %s); merging with Gracenote hints.' % (consensus_track.artist, consensus_track.album))
+        result_list.append(merge_hints(query_track, consensus_track, parts[i]))
+      else:
+        result_list.append(query_track)
+
+
+def merge_hints(query_track, consensus_track, part):
+
+  merged_track = Media.Track(
+    index = query_track.index,
+    album = consensus_track.album,
+    artist = consensus_track.artist,
+    title = query_track.name,
+    disc = consensus_track.disc,
+    year = consensus_track.year,
+    guid = 'com.plexapp.agents.gracenote://track/' + sha1(query_track.name or query_track.title).hexdigest(),
+    album_guid = consensus_track.album_guid,
+    artist_guid = consensus_track.artist_guid)
+
+  merged_track.parts.append(part)
+
+  if DEBUG:
+    # merged_track.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album_match.png'
+    # merged_track.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist_match.png'
+    merged_track.album_thumb_url = consensus_track.album_thumb_url
+    merged_track.artist_thumb_url = consensus_track.artist_thumb_url
+    merged_track.name = merged_track.name + ' [MERGED GN MISS]'
+    Log('Query track: ' + str(query_track))
+    Log('Merged track: ' + str(merged_track))
+
+  return merged_track

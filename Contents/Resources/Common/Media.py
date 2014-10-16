@@ -57,8 +57,7 @@ class Track(MediaRoot):
     self.artist_thumb_url = artist_thumb_url
     
   def __repr__(self):
-    return "album_artist: %s artist: %s (album: %s, track: %s, guid: %s, album_guid: %s, artist_guid: %s) #%d => %s" % (self.album_artist, self.artist, self.album, self.name, self.guid, self.album_guid, self.artist_guid, self.index, self.title)
-    
+    return "artist: %s, album: %s, name: %s, index: %s, year: %s, disc: %s, album_artist: %s, title: %s, guid: %s, album_guid: %s, artist_guid: %s, album_thumb_url: %s, artist_thumb_url: %s" % (self.artist, self.album, self.name, self.index, self.year, self.disc, self.album_artist, self.title, self.guid, self.album_guid, self.artist_guid, self.album_thumb_url, self.artist_thumb_url)
 class Photo(MediaRoot):
   def __init__(self, title):
     MediaRoot.__init__(self, 'Photo')
