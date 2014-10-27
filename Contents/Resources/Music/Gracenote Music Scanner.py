@@ -260,24 +260,24 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
 def merge_hints(query_track, consensus_track, part):
 
   merged_track = Media.Track(
-    index = query_track.index,
-    album = consensus_track.album,
-    artist = consensus_track.artist,
-    title = query_track.name,
-    disc = consensus_track.disc,
-    year = consensus_track.year,
-    guid = 'com.plexapp.agents.gracenote://track/' + sha1(query_track.name or query_track.title).hexdigest(),
-    album_guid = consensus_track.album_guid,
-    artist_guid = consensus_track.artist_guid)
+    index = int(query_track.index),
+    album = toBytes(consensus_track.album),
+    artist = toBytes(consensus_track.artist),
+    title = toBytes(query_track.name),
+    disc = toBytes(consensus_track.disc),
+    year = toBytes(consensus_track.year),
+    guid = toBytes('com.plexapp.agents.gracenote://track/' + sha1(query_track.name or query_track.title).hexdigest()),
+    album_guid = toBytes(consensus_track.album_guid),
+    artist_guid = toBytes(consensus_track.artist_guid))
 
   merged_track.parts.append(part)
 
   if DEBUG:
     # merged_track.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album_match.png'
     # merged_track.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist_match.png'
-    merged_track.album_thumb_url = consensus_track.album_thumb_url
-    merged_track.artist_thumb_url = consensus_track.artist_thumb_url
-    merged_track.name = merged_track.name + ' [MERGED GN MISS]'
+    merged_track.album_thumb_url = toBytes(consensus_track.album_thumb_url)
+    merged_track.artist_thumb_url = toBytes(consensus_track.artist_thumb_url)
+    merged_track.name = toBytes(merged_track.name + ' [MERGED GN MISS]')
     Log('Query track: ' + str(query_track))
     Log('Merged track: ' + str(merged_track))
 
