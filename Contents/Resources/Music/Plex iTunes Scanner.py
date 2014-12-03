@@ -34,7 +34,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
         # Track index.
         index = int(track.getAttribute('index'))
-        path = AudioFiles.cleanPass(track.getAttribute('file'))
+        path = cleanPass(track.getAttribute('file'))
         if index == 0:
           try: index = int(re.findall('[.\-]+[ ]*([0-9]{2})[ ]*[.\-]', os.path.basename(path))[0])
           except: 
@@ -50,3 +50,10 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
                         disc = int(track.getAttribute('disc')))
         t.parts.append(urllib.unquote(path))
         mediaList.append(t)
+
+def cleanPass(t):
+  try:
+    t = re.sub(RE_UNICODE_CONTROL, '', t.strip().encode('utf-8'))
+  except:
+    pass
+  return t
