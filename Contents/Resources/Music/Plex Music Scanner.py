@@ -198,7 +198,7 @@ def getInfoFromTag(filename, language):
   tag = MFile(filename, None, True)
   if tag is None:
     return (None, None, None, None, None, None, None)
-  elif tag.__class__.__name__ in ('EasyID3', 'EasyMP3', 'EasyTrueAudio', 'ID3', 'MP3', 'TrueAudio'): # All use ID3 tags
+  elif type(tag).__name__ in ('EasyID3', 'EasyMP3', 'EasyTrueAudio', 'ID3', 'MP3', 'TrueAudio'): # All use ID3 tags
     artist = mp3tagGrabber(tag, filename, 'artist', language, force=True)
     album = mp3tagGrabber(tag, filename, 'album', language, force=True)
     title = mp3tagGrabber(tag, filename, 'title', language, force=True)
@@ -209,7 +209,7 @@ def getInfoFromTag(filename, language):
       compil = tag['compilation'][0]
     except:
       pass
-  elif tag.__class__.__name__ is 'AIFF': # Uses ID3 tags, but has a different header than MP3 and no 'Easy' mutagen class
+  elif type(tag).__name__ is 'AIFF': # Uses ID3 tags, but has a different header than MP3 and no 'Easy' mutagen class
     artist = mutagenGrabber(tag, 'TPE1', language)
     if artist is None:
       artist = mutagenGrabber(tag, 'TP1', language)
@@ -236,7 +236,7 @@ def getInfoFromTag(filename, language):
       compil = tag['compilation'][0]
     except:
       pass
-  elif tag.__class__.__name__ is 'ASF':
+  elif type(tag).__name__ is 'ASF':
     artist = getWMAstring(mutagenGrabber(tag, 'Author', language))
     album = getWMAstring(mutagenGrabber(tag, 'WM/AlbumTitle', language))
     title = getWMAstring(mutagenGrabber(tag, 'Title', language))
