@@ -3,7 +3,7 @@ import Filter
 import os.path
 
 audio_exts = ['mp3', 'm4p', 'm4a', 'm4b', 'flac', 'aac', 'rm', 'rma', 'mpa', 'wav', 'wma', 'ogg', 'mp2', 
-              'ac3', 'dts', 'ape', 'mpc', 'mp+', 'mpp', 'shn', 'oga', 'aiff']
+              'ac3', 'dts', 'ape', 'mpc', 'mp+', 'mpp', 'shn', 'oga', 'aiff', 'aif']
 
 # Remove files that aren't audios.
 def Scan(path, files, mediaList, subdirs, root=None):
