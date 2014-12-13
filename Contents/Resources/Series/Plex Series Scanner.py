@@ -9,6 +9,7 @@ episode_regexps = [
     '(?P<show>.*?)[sS](?P<season>[0-9]+)[\._ ]*[eE](?P<ep>[0-9]+)[\._ ]*([- ]?[sS](?P<secondSeason>[0-9]+))?([- ]?[Ee+](?P<secondEp>[0-9]+))?', # S03E04-E05
     '(?P<show>.*?)[sS](?P<season>[0-9]{2})[\._\- ]+(?P<ep>[0-9]+)',                                                            # S03-03
     '(?P<show>.*?)([^0-9]|^)(?P<season>(19[3-9][0-9]|20[0-5][0-9]|[0-9]{1,2}))[Xx](?P<ep>[0-9]+)((-[0-9]+)?[Xx](?P<secondEp>[0-9]+))?',  # 3x03, 3x03-3x04, 3x03x04
+    '(.*?)(^|[\._\- ])+(?P<season>sp)(?P<ep>[0-9]{2})([\._\- ]|$)+',  # SP01 (Special 01, equivalent to S00E01)
     '(.*?)[^0-9a-z](?P<season>[0-9]{1,2})(?P<ep>[0-9]{2})([\.\-][0-9]+(?P<secondEp>[0-9]{2})([ \-_\.]|$)[\.\-]?)?([^0-9a-z%]|$)' # .602.
   ]
 
@@ -58,7 +59,9 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
           
           # Extract data.
           show = match.group('show')
-          season = int(match.group('season'))
+          season = match.group('season')
+          if season.lower() == 'sp':
+            season = 0
           episode = int(match.group('ep'))
           endEpisode = episode
           if match.groupdict().has_key('secondEp') and match.group('secondEp'):
@@ -160,6 +163,11 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
                 for rx in episode_regexps[:-1]:
                   match = re.search(rx, file, re.IGNORECASE)
                   if match:
+                    season = match.group('season')
+                    if season.lower() == 'sp':
+                      season = 0
+                    else:
+                      season = int(season)
                     m4season = int(match.group('season'))
                     m4ep = int(match.group('ep'))
                     found = True
@@ -232,7 +240,11 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
             match = re.search(rx, file, re.IGNORECASE)
             if match:
               # Parse season and episode.
-              the_season = int(match.group('season'))
+              the_season = match.group('season')
+              if the_season.lower() == 'sp':
+                the_season = 0
+              else:
+                the_season = int(the_season)
               episode = int(match.group('ep'))
               endEpisode = episode
               if match.groupdict().has_key('secondEp') and match.group('secondEp'):
@@ -246,7 +258,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
                   done = True
                   break
                   
-                # Skip episode 0 on the weak regex since it's pretty much never right.
+                # Skip season 0 on the weak regex since it's pretty much never right.
                 if the_season == 0:
                   break
                   
