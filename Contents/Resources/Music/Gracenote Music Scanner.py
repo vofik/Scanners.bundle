@@ -55,7 +55,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       if tracks[int(index)]:
         do_quick_match = False
         mixed = True
-        Log('Found duplicate track index: %d; doing expensive matching with mixed content.' % index)
+        Log('Found duplicate track index: %s; doing expensive matching with mixed content.' % index)
         break
       else:
         tracks[int(index)] = True
