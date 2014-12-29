@@ -98,8 +98,8 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       Log('Building query list for quickmatch with artist: %s, album: %s' % (artist, album))
 
       # Determine if the artist and/or album appears in all filenames, since we'll want to strip these out for clean titles.
-      strip_artist = True if len([f for f in files if artist.lower() in os.path.basename(f).lower()]) == len(files) else False
-      strip_album = True if len([f for f in files if album.lower() in os.path.basename(f).lower()]) == len(files) else False
+      strip_artist = True if len([f for f in files if artist.lower() in os.path.basename(f).decode('utf-8').lower()]) == len(files) else False
+      strip_album = True if len([f for f in files if album.lower() in os.path.basename(f).decode('utf-8').lower()]) == len(files) else False
 
       for f in files:
         try:
