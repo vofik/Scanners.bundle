@@ -260,7 +260,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
 def merge_hints(query_track, consensus_track, part):
 
   merged_track = Media.Track(
-    index = int(query_track.index),
+    index = int(query_track.index) if query_track.index is not None else -1,
     album = toBytes(consensus_track.album),
     artist = toBytes(consensus_track.artist),
     title = toBytes(query_track.name),
