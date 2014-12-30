@@ -198,11 +198,22 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     return
   
   # Look through the results and determine some consensus metadata so we can do a better job of keeping rogue and unmatched tracks together.
-  artist_consensus = Counter([(t[1].getAttribute('grandparentGUID'), t[1].getAttribute('grandparentTitle'), t[1].getAttribute('grandparentThumb')) for t in matched_tracks.items()]).most_common()[0][0]
-  album_consensus = Counter([(t[1].getAttribute('parentGUID'), t[1].getAttribute('parentTitle'), t[1].getAttribute('parentThumb')) for t in matched_tracks.items()]).most_common()[0][0]
-  year_consensus = Counter([t[1].getAttribute('year') for t in matched_tracks.items()]).most_common()[0][0]
-  consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
+  artist_list = [(t[1].getAttribute('grandparentGUID'), t[1].getAttribute('grandparentTitle'), t[1].getAttribute('grandparentThumb')) for t in matched_tracks.items()]
+  artist_consensus = Counter(artist_list).most_common()[0][0] if len(artist_list) > 0 else ('', '', '')
   
+  album_list = [(t[1].getAttribute('parentGUID'), t[1].getAttribute('parentTitle'), t[1].getAttribute('parentThumb')) for t in matched_tracks.items()]
+  album_consensus = Counter(album_list).most_common()[0][0] if len(album_list) > 0 else ('', '', '')
+  
+  year_list = [t[1].getAttribute('year') for t in matched_tracks.items()]
+  year_consensus = Counter(year_list).most_common()[0][0] if len(year_list) > 0 else -1
+
+  if DEBUG:
+    Log('Found artists: ' + str(Counter(artist_list).most_common()))
+    Log('Found albums: ' + str(Counter(album_list).most_common()))
+    Log('Found years: ' + str(Counter(year_list).most_common()))
+  
+  consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
+
   # Add Gracenote results to the result_list where we have them.
   for i, query_track in enumerate(query_list):
     if str(i) in matched_tracks:
@@ -279,6 +290,7 @@ def merge_hints(query_track, consensus_track, part):
     merged_track.artist_thumb_url = toBytes(consensus_track.artist_thumb_url)
     merged_track.name = toBytes(merged_track.name + ' [MERGED GN MISS]')
     Log('Query track: ' + str(query_track))
+    Log('Consensus track: ' + str(consensus_track))
     Log('Merged track: ' + str(merged_track))
 
   return merged_track
