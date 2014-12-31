@@ -14,7 +14,7 @@ from UnicodeHelper import toBytes
 import mutagen
 from hashlib import sha1
 
-DEBUG = False
+DEBUG = True
 
 def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
