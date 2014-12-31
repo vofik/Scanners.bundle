@@ -277,7 +277,6 @@ def merge_hints(query_track, consensus_track, part):
     title = toBytes(query_track.name),
     disc = toBytes(consensus_track.disc),
     year = toBytes(consensus_track.year),
-    guid = toBytes('com.plexapp.agents.gracenote://track/' + sha1(query_track.name or query_track.title).hexdigest()),
     album_guid = toBytes(consensus_track.album_guid),
     artist_guid = toBytes(consensus_track.artist_guid))
 
