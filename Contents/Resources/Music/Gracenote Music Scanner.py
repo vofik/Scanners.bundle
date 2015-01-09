@@ -124,7 +124,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
           # Remove any remaining index-, artist-, and album-related cruft from the head of the track title.
           title = re.sub(r'^[\W\-]+', '', title).strip()
       
-          t = Media.Track(artist=artist, album=album, title=title, index=int(index))
+          t = Media.Track(artist=toBytes(artist), album=toBytes(album), title=toBytes(title), index=int(index))
           t.parts.append(f)
 
           Log('\tAdding: %s - %s' % (index, title))
