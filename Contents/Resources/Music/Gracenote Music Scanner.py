@@ -22,8 +22,9 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
   AudioFiles.Scan(path, files, mediaList, subdirs, root)
   root_str = root or ''
   loc_str = os.path.join(root_str, path)
-  Log('Scanning:  ' + loc_str)
+  Log('Scanning: ' + loc_str)
   Log('Files: ' + str(files))
+  Log('Subdirs: ' + str(subdirs))
 
   # Look at the files and determine whether we can do a quick match (minimal tag parsing).
   do_quick_match = True
@@ -47,7 +48,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     tracks = SparseList()
     for f in files:
       try: 
-        index = re.search(r'^([0-9]{1,2}).*',os.path.split(f)[-1]).groups(0)[0]
+        index = re.search(r'^([0-9]{1,3})[^0-9].*',os.path.split(f)[-1]).groups(0)[0]
       except:
         do_quick_match = False
         Log('Couldn\'t find track indices in all filenames; doing expensive matching.')
