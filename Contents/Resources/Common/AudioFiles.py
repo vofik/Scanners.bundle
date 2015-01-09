@@ -52,14 +52,18 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
 
       if track == None:
         # See if we have a tracknumber in the title; if so, extract and strip it.
-        m = re.match("^([0-9]{1,3})[ .-]+(.*)$", title)
+        m = re.match("^([0-9]{1,3})([^0-9].*)$", os.path.basename(f))
         if m:
-          track, title = int(m.group(1)), m.group(2)
+          track, new_title = int(m.group(1)), m.group(2)
+          
+          # If we don't have a title, steal it from the filename.
+          if title == None:
+            title = new_title
       else:
         # Check to see if the title starts with the track number and whack it.
         title = re.sub("^[ 0]*%s[ ]+" % track, '', title)
 
-      title = title.strip(' -.')
+      title = title.strip(' -._')
 
       (allbutParentDir, parentDir) = os.path.split(os.path.dirname(f))
       if title.count(' - ') == 1 and artist == '[Unknown Artist]': # see if we can parse the title for artist - title
