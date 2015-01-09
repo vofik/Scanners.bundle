@@ -65,6 +65,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     album = None
 
     if do_quick_match:
+      Log('Doing quick match')
       
       # See if we have some consensus on artist/album by reading a few tags.
       for i in range(3):
@@ -145,6 +146,18 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     for result in result_list:
       mediaList.append(result)
 
+def has_contiguous_track_indexes(query_list):
+  indexes = []
+  for track in query_list:
+    indexes.append(track.index)
+  
+  indexes.sort()
+  for i, index in enumerate(indexes):
+    if i+1 != index:
+      return False
+    
+  return len(indexes) == len(query_list)
+
 def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False):
 
   # Build up the query with the contents of the query list.
@@ -195,8 +208,16 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   Log('Found %d unique artist(s) and %d unique album(s); matched %d of %d tracks with %d unique indices.' % (unique_artists, unique_albums, len(res.getElementsByTagName('Track')), len(query_list), unique_indices))
   if (len(matched_tracks) < len(query_list) or unique_artists > 1 or unique_albums > 1 or unique_indices != len(matched_tracks)) and fingerprint == False and mixed == False:
     Log('Re-running with fingerprinting.')
-    lookup(query_list, result_list, language, True, mixed)
-    return
+    new_result_list = []
+    lookup(query_list, new_result_list, language, True, mixed)
+    
+    # If fingerprinting made something pretty sane go all batshit crazy, let's not use it.
+    albums = set([track.album_guid for track in new_result_list])
+    if has_contiguous_track_indexes(query_list) and len(albums) > 1 and unique_albums == 1:
+      Log("Looks like fingerprinting went crazy, we'll back away slowly.")
+    else:
+      result_list.extend(new_result_list)
+      return
   
   # Look through the results and determine some consensus metadata so we can do a better job of keeping rogue and unmatched tracks together.
   artist_list = [(t[1].getAttribute('grandparentGUID'), t[1].getAttribute('grandparentTitle'), t[1].getAttribute('grandparentThumb')) for t in matched_tracks.items()]
@@ -266,8 +287,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         Log('Other positive Gracenote matches were all from the same artist and album (%s, %s); merging with Gracenote hints.' % (consensus_track.artist, consensus_track.album))
         result_list.append(merge_hints(query_track, consensus_track, parts[i]))
       else:
+        Log('No matches, just appending query track')
         result_list.append(query_track)
-
 
 def merge_hints(query_track, consensus_track, part):
 
