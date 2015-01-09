@@ -155,10 +155,13 @@ def has_contiguous_track_indexes(query_list):
   for i, index in enumerate(indexes):
     if i+1 != index:
       return False
-    
+
   return len(indexes) == len(query_list)
 
 def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False):
+
+  # See if input looks like a sane album
+  has_contiguous_tracks = has_contiguous_track_indexes(query_list)
 
   # Build up the query with the contents of the query list.
   args = ''
@@ -213,7 +216,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     
     # If fingerprinting made something pretty sane go all batshit crazy, let's not use it.
     albums = set([track.album_guid for track in new_result_list])
-    if has_contiguous_track_indexes(query_list) and len(albums) > 1 and unique_albums == 1:
+    if has_contiguous_tracks and len(albums) > 1 and unique_albums == 1:
       Log("Looks like fingerprinting went crazy, we'll back away slowly.")
     else:
       result_list.extend(new_result_list)
@@ -237,10 +240,13 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
 
   # Add Gracenote results to the result_list where we have them.
+  first_track = None
   for i, query_track in enumerate(query_list):
     if str(i) in matched_tracks:
       try:
         track = matched_tracks[str(i)]
+        if first_track is None:
+          first_track = track
 
         # If the track index changed, and we didn't perfectly match everything, consider this a bad sign that something went wrong during fingerprint matching and abort.
         if query_track.index and int(track.getAttribute('index') or -1) != query_track.index and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
@@ -274,6 +280,14 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
           if t.artist_thumb_url == 'http://':
             t.artist_thumb_url == 'https://dl.dropboxusercontent.com/u/8555161/no_artist.png'
           Log('Adding matched track: ' + str(t))
+
+        # If we had sane input, but some tracks got put into a different album, don't allow that.
+        if has_contiguous_tracks and t.album_guid != first_track.getAttribute('parentGUID'):
+          Log("Need to fixup track: %d" % t.index)
+          t.index = query_track.index
+          t.album_guid = toBytes(first_track.getAttribute('parentGUID'))
+          t.album = toBytes(first_track.getAttribute('parentTitle'))
+          t.album_thumb_url = toBytes(first_track.getAttribute('parentThumb'))
 
         result_list.append(t)
 
