@@ -9,7 +9,7 @@ from urllib import urlopen, quote
 from xml.dom import minidom
 from collections import Counter
 import Media, AudioFiles, Utils
-from Utils import SparseList, Log
+from Utils import SparseList, Log, LevenshteinDistance
 from UnicodeHelper import toBytes
 import mutagen
 from hashlib import sha1
@@ -146,22 +146,28 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     for result in result_list:
       mediaList.append(result)
 
-def has_contiguous_track_indexes(query_list):
+def has_sane_track_indexes(query_list):
   indexes = []
   for track in query_list:
     indexes.append(track.index)
   
+  # See if we have contiguous tracks.
+  contiguous = True
   indexes.sort()
   for i, index in enumerate(indexes):
     if i+1 != index:
-      return False
+      contiguous = False
+      break
+  
+  # See if they're unique.
+  unique = (len(query_list) == len(set(indexes)))
 
-  return len(indexes) == len(query_list)
+  return contiguous or unique
 
 def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False):
 
   # See if input looks like a sane album
-  has_contiguous_tracks = has_contiguous_track_indexes(query_list)
+  sane_input_tracks = has_sane_track_indexes(query_list)
 
   # Build up the query with the contents of the query list.
   args = ''
@@ -208,21 +214,9 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     for track in [match[1] for match in matched_tracks.items()]:
       Log(track.toxml())
 
-  Log('Found %d unique artist(s) and %d unique album(s); matched %d of %d tracks with %d unique indices.' % (unique_artists, unique_albums, len(res.getElementsByTagName('Track')), len(query_list), unique_indices))
-  if (len(matched_tracks) < len(query_list) or unique_artists > 1 or unique_albums > 1 or unique_indices != len(matched_tracks)) and fingerprint == False and mixed == False:
-    Log('Re-running with fingerprinting.')
-    new_result_list = []
-    lookup(query_list, new_result_list, language, True, mixed)
-    
-    # If fingerprinting made something pretty sane go all batshit crazy, let's not use it.
-    albums = set([track.album_guid for track in new_result_list])
-    if has_contiguous_tracks and len(albums) > 1 and unique_albums == 1:
-      Log("Looks like fingerprinting went crazy, we'll back away slowly.")
-    else:
-      result_list.extend(new_result_list)
-      return
-  
-  # Look through the results and determine some consensus metadata so we can do a better job of keeping rogue and unmatched tracks together.
+  # Look through the results and determine some consensus metadata so we can do a better job of keeping rogue and 
+  # unmatched tracks together.
+  #
   artist_list = [(t[1].getAttribute('grandparentGUID'), t[1].getAttribute('grandparentTitle'), t[1].getAttribute('grandparentThumb')) for t in matched_tracks.items()]
   artist_consensus = Counter(artist_list).most_common()[0][0] if len(artist_list) > 0 else ('', '', '')
   
@@ -239,6 +233,27 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
 
+  Log('Found %d unique artist(s) and %d unique album(s); matched %d of %d tracks with %d unique indices.' % (unique_artists, unique_albums, len(res.getElementsByTagName('Track')), len(query_list), unique_indices))
+  if (len(matched_tracks) < len(query_list) or unique_artists > 1 or unique_albums > 1 or unique_indices != len(matched_tracks)) and fingerprint == False and mixed == False:
+    Log('Re-running with fingerprinting.')
+    new_result_list = []
+    lookup(query_list, new_result_list, language, True, mixed)
+    
+    # If fingerprinting made something pretty sane go all batshit crazy, let's not use it.
+    albums = set([track.album_guid for track in new_result_list])
+
+    # Compute text difference between text and fingerprint album results as compared to input.
+    text_album_difference = LevenshteinDistance(query_list[0].album, consensus_track.album)
+    fingerprint_album_difference = LevenshteinDistance(consensus_track.album, new_result_list[0].album)
+    
+    if sane_input_tracks and len(albums) > 1 and unique_albums == 1:
+      Log("Looks like fingerprinting went crazy, we'll back away slowly.")
+    elif sane_input_tracks and fingerprint_album_difference > text_album_difference:
+      Log("Looks like fingerprinting picked the wrong album, ignoring.")
+    else:
+      result_list.extend(new_result_list)
+      return
+  
   # Add Gracenote results to the result_list where we have them.
   first_track = None
   for i, query_track in enumerate(query_list):
@@ -248,7 +263,9 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         if first_track is None:
           first_track = track
 
-        # If the track index changed, and we didn't perfectly match everything, consider this a bad sign that something went wrong during fingerprint matching and abort.
+        # If the track index changed, and we didn't perfectly match everything, consider this a bad sign that something
+        # went wrong during fingerprint matching and abort.
+        #
         if query_track.index and int(track.getAttribute('index') or -1) != query_track.index and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
           Log('Track index changed (%s -> %s) and match was not perfect, using merged hints.' % (query_track.index, track.getAttribute('index')))
           result_list.append(merge_hints(query_track, consensus_track, parts[i]))
@@ -282,7 +299,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
           Log('Adding matched track: ' + str(t))
 
         # If we had sane input, but some tracks got put into a different album, don't allow that.
-        if has_contiguous_tracks and t.album_guid != first_track.getAttribute('parentGUID'):
+        if sane_input_tracks and t.album_guid != first_track.getAttribute('parentGUID'):
           Log("Need to fixup track: %d" % t.index)
           t.index = query_track.index
           t.album_guid = toBytes(first_track.getAttribute('parentGUID'))
