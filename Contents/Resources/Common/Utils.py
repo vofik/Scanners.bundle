@@ -82,4 +82,4 @@ def LevenshteinDistance(first, second):
 
 # Levenshtein ratio.
 def LevenshteinRatio(first, second):
-  return 1 - (LevenshteinDistance(first, second) / max(len(first), len(second)))
+  return 1 - (LevenshteinDistance(first, second) / float(max(len(first), len(second))))
