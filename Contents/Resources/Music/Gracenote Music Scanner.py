@@ -256,6 +256,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   
   # Add Gracenote results to the result_list where we have them.
   first_track = None
+  tracks_without_matches = []
+  
   for i, query_track in enumerate(query_list):
     if str(i) in matched_tracks:
       try:
@@ -313,13 +315,21 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
 
     else:
       Log('Didn\'t get a track match for %s at path: %s' % ((query_track.title or query_track.name), query_track.parts[0]))
-            
+
       if unique_albums == 1 and unique_artists == 1:
         Log('Other positive Gracenote matches were all from the same artist and album (%s, %s); merging with Gracenote hints.' % (consensus_track.artist, consensus_track.album))
         result_list.append(merge_hints(query_track, consensus_track, parts[i]))
       else:
         Log('No matches, just appending query track')
-        result_list.append(query_track)
+        tracks_without_matches.append((query_track, parts[i]))
+        
+  # Now consider the unmatched tracks. If they were the minority, then just merge them in.
+  if len(tracks_without_matches) / float(len(query_list)) < 0.3:
+    Log('Minority of tracks were unmatched, hooking them back up.')
+    result_list.extend([merge_hints(tup[0], consensus_track, tup[1]) for tup in tracks_without_matches])
+  else:
+    Log('The majority of tracks were unmatched, letting them be.')
+    result_list.extend([tup[0] for tup in tracks_without_matches])
 
 def merge_hints(query_track, consensus_track, part):
 
