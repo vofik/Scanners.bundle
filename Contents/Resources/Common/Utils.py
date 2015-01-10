@@ -17,17 +17,6 @@ def ContainsFile(files, file):
       return i
   return None
 
-# Sparse list allows setting/accessing arbitrary indices.
-class SparseList(list):
-  def __setitem__(self, index, value):
-    missing = index - len(self) + 1
-    if missing > 0:
-      self.extend([None] * missing)
-    list.__setitem__(self, index, value)
-  def __getitem__(self, index):
-    try: return list.__getitem__(self, index)
-    except IndexError: return None
-
 # Log to PMS log.
 def Log(message, level=3, source='Scanners.bundle'):
   args = urlencode({'message' : UnicodeHelper.toBytes(message), 'level' : level, 'source' : source})

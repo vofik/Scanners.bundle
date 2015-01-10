@@ -9,7 +9,7 @@ from urllib import urlopen, quote
 from xml.dom import minidom
 from collections import Counter, defaultdict
 import Media, AudioFiles, Utils
-from Utils import SparseList, Log, LevenshteinDistance, LevenshteinRatio
+from Utils import Log, LevenshteinDistance, LevenshteinRatio
 from UnicodeHelper import toBytes
 import mutagen
 from hashlib import sha1
@@ -45,7 +45,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       mixed = True
 
     # Make sure we have reliable track indices for all files and there are no dupes.
-    tracks = SparseList()
+    tracks = {}
     for f in files:
       try: 
         index = re.search(r'^([0-9]{1,3})[^0-9].*',os.path.split(f)[-1]).groups(0)[0]
@@ -53,13 +53,13 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
         do_quick_match = False
         Log('Couldn\'t find track indices in all filenames; doing expensive matching.')
         break
-      if tracks[int(index)]:
+      if tracks.get(index):
         do_quick_match = False
         mixed = True
         Log('Found duplicate track index: %s; doing expensive matching with mixed content.' % index)
         break
       else:
-        tracks[int(index)] = True
+        tracks[index] = True
 
     artist = None
     album = None
