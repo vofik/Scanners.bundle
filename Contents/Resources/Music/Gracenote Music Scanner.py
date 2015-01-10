@@ -268,9 +268,9 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     for track in query_list:
       if LevenshteinRatio(track.artist, consensus_track.artist) < .8 or LevenshteinRatio(track.album, consensus_track.album) < .8:
         Log('Found questionable artist (%s vs. %s) or album (%s vs. %s) for %d tracks, falling back to file hints.' % (track.artist, consensus_track.artist, track.album, consensus_track.album, len(query_list)))
-      for track in query_list:
-        result_list.append(track)
-      return
+        for track in query_list:
+          result_list.append(track)
+        return
 
   # Add Gracenote results to the result_list where we have them.
   first_track = None
