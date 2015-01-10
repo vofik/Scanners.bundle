@@ -7,7 +7,7 @@ import urllib
 import re, os.path, random
 from urllib import urlopen, quote
 from xml.dom import minidom
-from collections import Counter
+from collections import Counter, defaultdict
 import Media, AudioFiles, Utils
 from Utils import SparseList, Log, LevenshteinDistance, LevenshteinRatio
 from UnicodeHelper import toBytes
@@ -141,12 +141,42 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
       query_list = list(mediaList)
       fingerprint = True
     
-    # OK, perform the lookup for each cluster of files.
-    lookup(query_list, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
+    # Preprocess for multi-discs.
+    discs = preprocess_tracks(query_list)
+    
+    # OK, perform the lookup for each disc.
+    for tracks in discs:
+      lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
 
     del mediaList[:]
     for result in result_list:
       mediaList.append(result)
+
+def preprocess_tracks(query_list):
+  tracks_by_disc = defaultdict(list)
+  
+  # See if we have multiple disks, first checking tags.
+  discs = set([t.disc for t in query_list if t.disc is not None])
+  if len(discs) > 1:
+    for t in query_list:
+      tracks_by_disc[t.disc].append(t)
+      return tracks_by_disc.values()
+  
+  # Otherwise, let's sort by filename, and see if we have clusters of tracks.
+  sorted_tracks = sorted(query_list, key=lambda track: track.parts[0])
+  disc = 1
+  last_index = 0
+  for t in sorted_tracks:
+    if t.index < last_index:
+      disc += 1
+    tracks_by_disc[disc].append(t)
+    last_index = t.index
+  
+  if len(tracks_by_disc) > 1:
+    return tracks_by_disc.values()
+  
+  # Otherwise, let's consider it a single disc.
+  return [query_list]
 
 def has_sane_track_indexes(query_list):
   indexes = []
