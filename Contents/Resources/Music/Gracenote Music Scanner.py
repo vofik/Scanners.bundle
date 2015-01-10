@@ -94,6 +94,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
     query_list = []
     result_list = []
+    fingerprint = False
 
     # Directory looks clean, let's build a query list directly from info gleaned from file names.
     if do_quick_match:
@@ -133,14 +134,15 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
         except Exception as e:
           Log('Error preparing tracks for quick matching: ' + str(e))
-      
-      lookup(query_list, result_list, language=language)
 
     # Otherwise, let's do old school directory crawling and tag reading for now (WiP).
     else:
       AudioFiles.Process(path, files, mediaList, subdirs, root)
       query_list = list(mediaList)
-      lookup(query_list, result_list, language=language, fingerprint=True, mixed=mixed)
+      fingerprint = True
+    
+    # OK, perform the lookup for each cluster of files.
+    lookup(query_list, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
 
     del mediaList[:]
     for result in result_list:
