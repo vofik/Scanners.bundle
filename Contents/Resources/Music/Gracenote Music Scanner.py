@@ -383,7 +383,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     
   # Last, but not least, let's clean up the results. Multi-disc album titles have cruft in them.
   for t in result_list:
-    t.album = re.sub('\[disc [0-9]\][ ]+', '', t.album, flags=re.IGNORECASE).strip()
+    t.album = re.sub('\[disc [0-9]\][ ]*', '', t.album, flags=re.IGNORECASE).strip()
+    print "Album:", t.album
 
 def merge_hints(query_track, consensus_track, part):
 
