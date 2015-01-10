@@ -79,3 +79,7 @@ def LevenshteinDistance(first, second):
         substitution = substitution + 1
       distance_matrix[i][j] = min(insertion, deletion, substitution)
   return distance_matrix[first_length-1][second_length-1]
+
+# Levenshtein ratio.
+def LevenshteinRatio(first, second):
+  return 1 - (LevenshteinDistance(first, second) / max(len(first), len(second)))

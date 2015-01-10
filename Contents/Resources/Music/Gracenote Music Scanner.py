@@ -9,7 +9,7 @@ from urllib import urlopen, quote
 from xml.dom import minidom
 from collections import Counter
 import Media, AudioFiles, Utils
-from Utils import SparseList, Log, LevenshteinDistance
+from Utils import SparseList, Log, LevenshteinDistance, LevenshteinRatio
 from UnicodeHelper import toBytes
 import mutagen
 from hashlib import sha1
@@ -115,11 +115,11 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
           title = re.sub(r' ?\(.*\)', '', title)
 
           # Remove artist name from title if it appears in all of them.
-          if strip_artist:
+          if strip_artist and len(files) > 2:
             title = re.sub(r'(?i)' + artist, '', title)
 
           # Remove album title from title if it appears in all of them.
-          if strip_album:
+          if strip_album and len(files) > 2:
             title = re.sub(r'(?i)' + album, '', title)
 
           # Remove any remaining index-, artist-, and album-related cruft from the head of the track title.
@@ -234,7 +234,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
 
   Log('Found %d unique artist(s) and %d unique album(s); matched %d of %d tracks with %d unique indices.' % (unique_artists, unique_albums, len(res.getElementsByTagName('Track')), len(query_list), unique_indices))
-  if (len(matched_tracks) < len(query_list) or unique_artists > 1 or unique_albums > 1 or unique_indices != len(matched_tracks)) and fingerprint == False and mixed == False:
+  if (len(matched_tracks) < 3 or len(matched_tracks) < len(query_list) or unique_artists > 1 or unique_albums > 1 or unique_indices != len(matched_tracks)) and fingerprint == False and mixed == False:
     Log('Re-running with fingerprinting.')
     new_result_list = []
     lookup(query_list, new_result_list, language, True, mixed)
@@ -255,13 +255,22 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       return
   
   # If we don't have some kind of match for most of the tracks in the query, chances are Gracenote doesn't know about this album,
-  # and we don't want to aggressively merge with the wrong thing.  Pull the rip cord and use the original hints.
+  # and we don't want to aggressively merge with the wrong thing. Pull the rip cord and use the original hints.
   #
   if len(matched_tracks) / len(query_list) < .8:
     Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(query_list), len(matched_tracks)))
     for track in query_list:
       result_list.append(track)
     return
+
+  # If we have a very small number of tracks, make sure the artist/album are close. These are noisier since we have fewer tracks to sanitize against.
+  if len(query_list) < 3:
+    for track in query_list:
+      if LevenshteinRatio(track.artist, consensus_track.artist) < .8 or LevenshteinRatio(track.album, consensus_track.album) < .8:
+        Log('Found questionable artist (%s vs. %s) or album (%s vs. %s) for %d tracks, falling back to file hints.' % (track.artist, consensus_track.artist, track.album, consensus_track.album, len(query_list)))
+      for track in query_list:
+        result_list.append(track)
+      return
 
   # Add Gracenote results to the result_list where we have them.
   first_track = None
