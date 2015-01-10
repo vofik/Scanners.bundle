@@ -164,7 +164,7 @@ def has_sane_track_indexes(query_list):
 
   return contiguous or unique
 
-def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False):
+def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False, multiple=False):
 
   # See if input looks like a sane album
   sane_input_tracks = has_sane_track_indexes(query_list)
@@ -194,8 +194,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
 
   fingerprint = 1 if fingerprint else 0
   mixed = 1 if mixed else 0
-  Log('Running Gracenote match with fingerprinting: %d and mixedContent: %d' % (fingerprint, mixed))
-  url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d%s&lang=%s' % (fingerprint, mixed, args, language)
+  Log('Running Gracenote match with fingerprinting: %d and mixedContent: %d and multiple: %d' % (fingerprint, mixed, multiple))
+  url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d&multiple=%d%s&lang=%s' % (fingerprint, mixed, multiple, args, language)
   try:
     res = minidom.parse(urlopen(url))
   except Exception, e:
@@ -247,13 +247,24 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     fingerprint_album_difference = LevenshteinDistance(consensus_track.album, new_result_list[0].album)
     
     if sane_input_tracks and len(albums) > 1 and unique_albums == 1:
-      Log("Looks like fingerprinting went crazy, we'll back away slowly.")
+      Log('Looks like fingerprinting went crazy, we\'ll back away slowly.')
     elif sane_input_tracks and fingerprint_album_difference > text_album_difference:
-      Log("Looks like fingerprinting picked the wrong album, ignoring.")
+      Log('Looks like fingerprinting picked the wrong album, ignoring.')
     else:
       result_list.extend(new_result_list)
       return
   
+  # If we don't have some kind of match for most of the tracks in the query, chances are Gracenote doesn't know about this album,
+  # and we don't want to aggressively merge with the wrong thing.  Pull the rip cord and use the original hints.
+  #
+  Log('Query tracks: %d' % len(query_list))
+  Log('Matched tracks: %d' % len(matched_tracks))
+  if len(matched_tracks) / len(query_list) < .8:
+    Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(query_list), len(matched_tracks)))
+    for track in query_list:
+      result_list.append(track)
+    return
+
   # Add Gracenote results to the result_list where we have them.
   first_track = None
   tracks_without_matches = []
