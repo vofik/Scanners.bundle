@@ -339,6 +339,10 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   else:
     Log('The majority of tracks were unmatched, letting them be.')
     result_list.extend([tup[0] for tup in tracks_without_matches])
+    
+  # Last, but not least, let's clean up the results. Multi-disc album titles have cruft in them.
+  for t in result_list:
+    t.album = re.sub('\[disc [0-9]\][ ]+', '', t.album, flags=re.IGNORECASE).strip()
 
 def merge_hints(query_track, consensus_track, part):
 
