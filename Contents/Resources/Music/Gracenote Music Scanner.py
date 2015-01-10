@@ -160,7 +160,7 @@ def preprocess_tracks(query_list):
   if len(discs) > 1:
     for t in query_list:
       tracks_by_disc[t.disc].append(t)
-      return tracks_by_disc.values()
+    return tracks_by_disc.values()
   
   # Otherwise, let's sort by filename, and see if we have clusters of tracks.
   sorted_tracks = sorted(query_list, key=lambda track: track.parts[0])
