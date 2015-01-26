@@ -10,7 +10,7 @@ ignore_samples = ['[-\._]sample', 'sample[-\._]']
 ignore_trailers = ['-trailer\.']
 ignore_extras = ['^trailer.?$','-deleted\.', '-behindthescenes\.', '-interview\.', '-scene\.']
 ignore_extras_startswith = ['^movie-trailer.*']
-ignore_dirs =  ['extras?', '!?samples?', 'bonus', '.*bonus disc.*', 'bdmv', 'video_ts', '^interview.?$', '^scene.?$', '^trailer.?$', '^deleted.?(scene.?)?$', '^behind.?the.?scenes$']
+ignore_dirs =  ['\\bextras?\\b', '!?samples?', 'bonus', '.*bonus disc.*', 'bdmv', 'video_ts', '^interview.?$', '^scene.?$', '^trailer.?$', '^deleted.?(scene.?)?$', '^behind.?the.?scenes$']
 ignore_suffixes = ['.dvdmedia']
 
 source_dict = {'bluray':['bdrc','bdrip','bluray','bd','brrip','hdrip','hddvd','hddvdrip'],'cam':['cam'],'dvd':['ddc','dvdrip','dvd','r1','r3','r5'],'retail':['retail'],
