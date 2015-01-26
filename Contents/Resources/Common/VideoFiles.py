@@ -95,11 +95,19 @@ def CleanName(name):
   garbage.extend(video_exts)
   garbage = set(garbage)
   
-  for t in newTokens:
-    if t.lower() in garbage:
-      tokenBitmap.append(False)
+  # Keep track of whether we've encountered a garbage token since they shouldn't appear more than once.
+  seenTokens = {}
+
+  # Go through the tokens backwards since the garbage most likely appears at the end of the file name.
+  # If we've seen a token already, don't consider it garbage the second time.  Helps cases like "Internal.Affairs.1990-INTERNAL.mkv"
+  #
+  for t in reversed(newTokens):
+    if t.lower() in garbage and t.lower() not in seenTokens:
+      tokenBitmap.insert(0, False)
+      seenTokens[t.lower()] = True
     else:
-      tokenBitmap.append(True)
+      tokenBitmap.insert(0, True)
+
   
   # Now strip out the garbage, with one heuristic; if we encounter 2+ BADs after encountering
   # a GOOD, take out the rest (even if they aren't BAD). Special case for director's cut.
