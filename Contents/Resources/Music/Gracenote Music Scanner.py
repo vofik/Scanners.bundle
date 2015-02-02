@@ -2,24 +2,25 @@
 # Copyright (c) 2010-2014 Plex Development Team. All rights reserved.
 #
 
-import AudioFiles
-import urllib
-import re, os.path, random
+import re
+import os.path
 from urllib import urlopen, quote
 from xml.dom import minidom
 from collections import Counter, defaultdict
-import Media, AudioFiles, Utils
+import Media
+import AudioFiles
+import mutagen
 from Utils import Log, LevenshteinDistance, LevenshteinRatio
 from UnicodeHelper import toBytes
-import mutagen
-from hashlib import sha1
+
 
 DEBUG = True
 
-def Scan(path, files, mediaList, subdirs, language=None, root=None):
+
+def Scan(path, files, media_list, subdirs, language=None, root=None):
 
   # Scan for audio files.
-  AudioFiles.Scan(path, files, mediaList, subdirs, root)
+  AudioFiles.Scan(path, files, media_list, subdirs, root)
   root_str = root or ''
   loc_str = os.path.join(root_str, path)
   Log('Scanning: ' + loc_str)
@@ -38,8 +39,8 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
   if files:
 
     # Make sure we're not sitting in the section root.
-    parentPath = os.path.split(files[0])[0]
-    if parentPath == root:
+    parent_path = os.path.split(files[0])[0]
+    if parent_path == root:
       Log('File(s) are in section root; doing expensive matching with mixed content.')
       do_quick_match = False
       mixed = True
@@ -48,7 +49,7 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     tracks = {}
     for f in files:
       try: 
-        index = re.search(r'^([0-9]{1,3})[^0-9].*',os.path.split(f)[-1]).groups(0)[0]
+        index = re.search(r'^([0-9]{1,3})[^0-9].*', os.path.split(f)[-1]).groups(0)[0]
       except:
         do_quick_match = False
         Log('Couldn\'t find track indices in all filenames; doing expensive matching.')
@@ -137,8 +138,8 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
 
     # Otherwise, let's do old school directory crawling and tag reading for now (WiP).
     else:
-      AudioFiles.Process(path, files, mediaList, subdirs, root)
-      query_list = list(mediaList)
+      AudioFiles.Process(path, files, media_list, subdirs, root)
+      query_list = list(media_list)
       fingerprint = True
     
     # Preprocess for multi-discs.
@@ -148,9 +149,10 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None):
     for tracks in discs:
       lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
 
-    del mediaList[:]
+    del media_list[:]
     for result in result_list:
-      mediaList.append(result)
+      media_list.append(result)
+
 
 def preprocess_tracks(query_list):
   tracks_by_disc = defaultdict(list)
@@ -178,6 +180,7 @@ def preprocess_tracks(query_list):
   # Otherwise, let's consider it a single disc.
   return [query_list]
 
+
 def has_sane_track_indexes(query_list):
   indexes = []
   for track in query_list:
@@ -187,7 +190,7 @@ def has_sane_track_indexes(query_list):
   contiguous = True
   indexes.sort()
   for i, index in enumerate(indexes):
-    if i+1 != index:
+    if i + 1 != index:
       contiguous = False
       break
   
@@ -195,6 +198,7 @@ def has_sane_track_indexes(query_list):
   unique = (len(query_list) == len(set(indexes)))
 
   return contiguous or unique
+
 
 def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False, multiple=False):
 
@@ -207,31 +211,30 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   for i, track in enumerate(query_list):
     
     # We need to pass at least a path and an identifier for each track that we know about.
-    args += '&tracks[%d].path=%s' % (i, quote(track.parts[0],''))
+    args += '&tracks[%d].path=%s' % (i, quote(track.parts[0], ''))
     args += '&tracks[%d].userData=%d' % (i, i)
     
     # Keep track of the identifier -> part mapping so we can reassemble later.
     parts[i] = track.parts[0]
 
     if track.name:
-      args += '&tracks[%d].title=%s' % (i, quote(toBytes(track.title or track.name),''))
+      args += '&tracks[%d].title=%s' % (i, quote(toBytes(track.title or track.name), ''))
     if track.artist and track.artist != 'Various Artists':
-      args += '&tracks[%d].artist=%s' % (i, quote(toBytes(track.artist),''))
+      args += '&tracks[%d].artist=%s' % (i, quote(toBytes(track.artist), ''))
     if track.album_artist:
-      args += '&tracks[%d].albumArtist=%s' % (i, quote(toBytes(track.album_artist),''))
+      args += '&tracks[%d].albumArtist=%s' % (i, quote(toBytes(track.album_artist), ''))
     if track.album and track.album != '[Unknown Album]':
-      args += '&tracks[%d].album=%s' % (i, quote(toBytes(track.album),''))
+      args += '&tracks[%d].album=%s' % (i, quote(toBytes(track.album), ''))
     if track.index:
       args += '&tracks[%d].index=%s' % (i, track.index)
 
-  fingerprint = 1 if fingerprint else 0
-  mixed = 1 if mixed else 0
   Log('Running Gracenote match with fingerprinting: %d and mixedContent: %d and multiple: %d' % (fingerprint, mixed, multiple))
   url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d&multiple=%d%s&lang=%s' % (fingerprint, mixed, multiple, args, language)
   try:
     res = minidom.parse(urlopen(url))
   except Exception, e:
     Log('Error parsing Gracenote response: ' + str(e))
+    return
 
   # See which tracks we got matches for.
   matched_tracks = {track.getAttribute('userData'): track for track in res.getElementsByTagName('Track')}
@@ -266,7 +269,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
 
   Log('Found %d unique artist(s) and %d unique album(s); matched %d of %d tracks with %d unique indices.' % (unique_artists, unique_albums, len(res.getElementsByTagName('Track')), len(query_list), unique_indices))
-  if (len(matched_tracks) < 3 or len(matched_tracks) < len(query_list) or unique_artists > 1 or unique_albums > 1 or unique_indices != len(matched_tracks)) and fingerprint == False and mixed == False:
+  if (len(matched_tracks) < 3 or len(matched_tracks) < len(query_list) or unique_artists > 1 or unique_albums > 1 or unique_indices != len(matched_tracks)) and not fingerprint and not mixed:
     Log('Re-running with fingerprinting.')
     new_result_list = []
     lookup(query_list, new_result_list, language, True, mixed)
@@ -300,8 +303,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     for track in query_list:
       if LevenshteinRatio(track.artist, consensus_track.artist) < .8 or LevenshteinRatio(track.album, consensus_track.album) < .8:
         Log('Found questionable artist (%s vs. %s) or album (%s vs. %s) for %d tracks, falling back to file hints.' % (track.artist, consensus_track.artist, track.album, consensus_track.album, len(query_list)))
-        for track in query_list:
-          result_list.append(track)
+        for fallback_track in query_list:
+          result_list.append(fallback_track)
         return
 
   # Add Gracenote results to the result_list where we have them.
@@ -324,17 +327,17 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
           continue
 
         t = Media.Track(
-              index = int(track.getAttribute('index')),
-              album = toBytes(track.getAttribute('parentTitle')),
-              artist = toBytes(track.getAttribute('originalTitle') or track.getAttribute('grandparentTitle')),
-              title = toBytes(track.getAttribute('title')),
-              disc = toBytes(track.getAttribute('parentIndex')),
-              album_thumb_url = toBytes(track.getAttribute('parentThumb')),
-              artist_thumb_url = toBytes(track.getAttribute('grandparentThumb')),
-              year = toBytes(track.getAttribute('year')),
-              guid = toBytes(track.getAttribute('guid')),
-              album_guid = toBytes(track.getAttribute('parentGUID')),
-              artist_guid = toBytes(track.getAttribute('grandparentGUID')))
+          index=int(track.getAttribute('index')),
+          album=toBytes(track.getAttribute('parentTitle')),
+          artist=toBytes(track.getAttribute('originalTitle') or track.getAttribute('grandparentTitle')),
+          title=toBytes(track.getAttribute('title')),
+          disc=toBytes(track.getAttribute('parentIndex')),
+          album_thumb_url=toBytes(track.getAttribute('parentThumb')),
+          artist_thumb_url=toBytes(track.getAttribute('grandparentThumb')),
+          year=toBytes(track.getAttribute('year')),
+          guid=toBytes(track.getAttribute('guid')),
+          album_guid=toBytes(track.getAttribute('parentGUID')),
+          artist_guid=toBytes(track.getAttribute('grandparentGUID')))
 
         # Set the album_artist if we got a track artist and it differs from the album's primary contributor.
         if track.getAttribute('originalTitle') and track.getAttribute('grandparentTitle') != t.artist:
@@ -343,11 +346,11 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         t.parts.append(parts[int(track.getAttribute('userData'))])
 
         if DEBUG:
-          t.name = t.name + ' [GN MATCH]'
+          t.name += ' [GN MATCH]'
           if t.album_thumb_url == 'http://':
             t.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album.png'
           if t.artist_thumb_url == 'http://':
-            t.artist_thumb_url == 'https://dl.dropboxusercontent.com/u/8555161/no_artist.png'
+            t.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist.png'
           Log('Adding matched track: ' + str(t))
 
         # If we had sane input, but some tracks got put into a different album, don't allow that.
@@ -385,17 +388,18 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   for t in result_list:
     t.album = re.sub('[ \-:]*\[*disc [0-9]\][ \-]*', '', t.album, flags=re.IGNORECASE).strip()
 
+
 def merge_hints(query_track, consensus_track, part):
 
   merged_track = Media.Track(
-    index = int(query_track.index) if query_track.index is not None else -1,
-    album = toBytes(consensus_track.album),
-    artist = toBytes(consensus_track.artist),
-    title = toBytes(query_track.name),
-    disc = toBytes(consensus_track.disc),
-    year = toBytes(consensus_track.year),
-    album_guid = toBytes(consensus_track.album_guid),
-    artist_guid = toBytes(consensus_track.artist_guid))
+    index=int(query_track.index) if query_track.index is not None else -1,
+    album=toBytes(consensus_track.album),
+    artist=toBytes(consensus_track.artist),
+    title=toBytes(query_track.name),
+    disc=toBytes(consensus_track.disc),
+    year=toBytes(consensus_track.year),
+    album_guid=toBytes(consensus_track.album_guid),
+    artist_guid=toBytes(consensus_track.artist_guid))
 
   merged_track.parts.append(part)
 
