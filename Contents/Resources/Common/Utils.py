@@ -1,4 +1,4 @@
-import os, re, string
+import os, re, string, unicodedata
 from urllib import urlopen, urlencode
 import UnicodeHelper
 
@@ -24,13 +24,18 @@ def Log(message, level=3, source='Scanners.bundle'):
   
 # Cleanup string.
 def CleanUpString(s):
-  s = unicode(s)
+
+  # Precompose.
+  try:
+    s = unicodedata.normalize('NFKD', s.decode('utf-8'))
+  except UnicodeError:
+    s = unicodedata.normalize('NFKD', s)
 
   # Ands.
   s = s.replace('&', 'and')
 
-  # Pre-process the string a bit to remove punctuation.
-  s = re.sub('[' + string.punctuation + ']', '', s)
+  # Strip diacritics and punctuation.
+  s = u''.join([c for c in s if not unicodedata.combining(c) and not unicodedata.category(c).startswith('P')])
   
   # Lowercase it.
   s = s.lower()
