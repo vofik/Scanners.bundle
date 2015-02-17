@@ -340,7 +340,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
           artist_guid=toBytes(track.getAttribute('grandparentGUID')))
 
         # Set the album_artist if we got a track artist and it differs from the album's primary contributor.
-        if track.getAttribute('originalTitle') and track.getAttribute('grandparentTitle') != t.artist:
+        if track.getAttribute('originalTitle') and toBytes(track.getAttribute('grandparentTitle')) != t.artist:
           t.album_artist = toBytes(track.getAttribute('grandparentTitle'))
 
         t.parts.append(parts[int(track.getAttribute('userData'))])
