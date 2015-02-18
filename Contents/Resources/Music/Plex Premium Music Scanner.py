@@ -292,7 +292,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # If we don't have some kind of match for most of the tracks in the query, chances are Gracenote doesn't know about this album,
   # and we don't want to aggressively merge with the wrong thing. Pull the rip cord and use the original hints.
   #
-  if len(matched_tracks) / len(query_list) < .8:
+  if float(len(matched_tracks)) / float(len(query_list)) < .8:
     Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(matched_tracks), len(query_list)))
     for track in query_list:
       result_list.append(track)
