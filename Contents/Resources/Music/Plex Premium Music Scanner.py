@@ -293,7 +293,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # and we don't want to aggressively merge with the wrong thing. Pull the rip cord and use the original hints.
   #
   if len(matched_tracks) / len(query_list) < .8:
-    Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(query_list), len(matched_tracks)))
+    Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(matched_tracks), len(query_list)))
     for track in query_list:
       result_list.append(track)
     return
