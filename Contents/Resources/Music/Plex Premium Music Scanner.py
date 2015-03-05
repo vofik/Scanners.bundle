@@ -150,8 +150,11 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
 
     del media_list[:]
-    for result in result_list:
-      media_list.append(result)
+    if len(result_list) > 0:
+      for result in result_list:
+        media_list.append(result)
+    else:  # We bailed during the GN lookup, fall back to tags.
+      AudioFiles.Process(path, files, media_list, subdirs, root)
 
 
 def preprocess_tracks(query_list):
@@ -273,6 +276,10 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     Log('Re-running with fingerprinting.')
     new_result_list = []
     lookup(query_list, new_result_list, language, True, mixed)
+
+    # Fast return if fallback search turned up nothing.
+    if not new_result_list:
+      return
     
     # If fingerprinting made something pretty sane go all batshit crazy, let's not use it.
     albums = set([track.album_guid for track in new_result_list])
@@ -294,8 +301,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   #
   if float(len(matched_tracks)) / float(len(query_list)) < .8:
     Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(matched_tracks), len(query_list)))
-    for track in query_list:
-      result_list.append(track)
+    del result_list[:]
     return
 
   # If we have a very small number of tracks, make sure the artist/album are close. These are noisier since we have fewer tracks to sanitize against.
@@ -303,8 +309,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     for track in query_list:
       if LevenshteinRatio(track.artist, consensus_track.artist) < .8 or LevenshteinRatio(track.album, consensus_track.album) < .8:
         Log('Found questionable artist (%s vs. %s) or album (%s vs. %s) for %d tracks, falling back to file hints.' % (track.artist, consensus_track.artist, track.album, consensus_track.album, len(query_list)))
-        for fallback_track in query_list:
-          result_list.append(fallback_track)
+        del result_list[:]
         return
 
   # Add Gracenote results to the result_list where we have them.
