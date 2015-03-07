@@ -313,21 +313,24 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         return
 
   # Add Gracenote results to the result_list where we have them.
-  first_track = None
   tracks_without_matches = []
   
   for i, query_track in enumerate(query_list):
     if str(i) in matched_tracks:
       try:
         track = matched_tracks[str(i)]
-        if first_track is None:
-          first_track = track
 
         # If the track index changed, and we didn't perfectly match everything, consider this a bad sign that something
         # went wrong during fingerprint matching and abort.
         #
         if query_track.index and int(track.getAttribute('index') or -1) != query_track.index and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
           Log('Track index changed (%s -> %s) and match was not perfect, using merged hints.' % (query_track.index, track.getAttribute('index')))
+          result_list.append(merge_hints(query_track, consensus_track, parts[i]))
+          continue
+
+        # If we had sane input, but some tracks got put into a different album, don't allow that.
+        if sane_input_tracks and track.getAttribute('parentGUID') != consensus_track.album_guid:
+          Log('Had sane input but track %s got split, using merged hints.' % track.getAttribute('index'))
           result_list.append(merge_hints(query_track, consensus_track, parts[i]))
           continue
 
@@ -357,14 +360,6 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
           if t.artist_thumb_url == 'http://':
             t.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist.png'
           Log('Adding matched track: ' + str(t))
-
-        # If we had sane input, but some tracks got put into a different album, don't allow that.
-        if sane_input_tracks and t.album_guid != first_track.getAttribute('parentGUID'):
-          Log("Need to fixup track: %d" % t.index)
-          t.index = query_track.index
-          t.album_guid = toBytes(first_track.getAttribute('parentGUID'))
-          t.album = toBytes(first_track.getAttribute('parentTitle'))
-          t.album_thumb_url = toBytes(first_track.getAttribute('parentThumb'))
 
         result_list.append(t)
 
