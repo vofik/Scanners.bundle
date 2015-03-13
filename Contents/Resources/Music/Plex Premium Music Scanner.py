@@ -304,14 +304,6 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     del result_list[:]
     return
 
-  # If we have a very small number of tracks, make sure the artist/album are close. These are noisier since we have fewer tracks to sanitize against.
-  if len(query_list) < 3:
-    for track in query_list:
-      if LevenshteinRatio(track.artist, consensus_track.artist) < .8 or LevenshteinRatio(track.album, consensus_track.album) < .8:
-        Log('Found questionable artist (%s vs. %s) or album (%s vs. %s) for %d tracks, falling back to file hints.' % (track.artist, consensus_track.artist, track.album, consensus_track.album, len(query_list)))
-        del result_list[:]
-        return
-
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
   
