@@ -297,12 +297,20 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       return
   
   # If we don't have some kind of match for most of the tracks in the query, chances are Gracenote doesn't know about this album,
-  # and we don't want to aggressively merge with the wrong thing. Pull the rip cord and use the original hints.
+  # and we don't want to aggressively merge with the wrong thing.
   #
   if float(len(matched_tracks)) / float(len(query_list)) < .8:
-    Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(matched_tracks), len(query_list)))
-    del result_list[:]
-    return
+    
+    # Before we bail completely, see if bonus tracks were screwing us up.
+    bonus_tracks = len([t for t in query_list if 'bonus' in t.name.lower()])
+    if float(len(matched_tracks)) / float(len(query_list) - bonus_tracks) >= .8:
+      Log('Only matched %d out of %d tracks, but found %d bonus tracks, pressing on.' % (len(matched_tracks), len(query_list), bonus_tracks))
+
+    # Okay, things really aren't looking good here, let's fall back.
+    else:
+      Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(matched_tracks), len(query_list)))
+      del result_list[:]
+      return
 
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
