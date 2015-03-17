@@ -49,7 +49,7 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
     tracks = {}
     for f in files:
       try: 
-        index = re.search(r'^([0-9]{1,3})[^0-9].*', os.path.split(f)[-1]).groups(0)[0]
+        index = re.search(r'^([0-9]{1,2})[^0-9].*', os.path.split(f)[-1]).groups(0)[0]
       except:
         do_quick_match = False
         Log('Couldn\'t find track indices in all filenames; doing expensive matching.')
