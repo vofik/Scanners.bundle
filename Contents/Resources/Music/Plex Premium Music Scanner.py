@@ -424,8 +424,8 @@ def merge_hints(query_track, consensus_track, part):
     merged_track.album_thumb_url = toBytes(consensus_track.album_thumb_url)
     merged_track.artist_thumb_url = toBytes(consensus_track.artist_thumb_url)
     merged_track.name = toBytes(merged_track.name + ' [MERGED GN MISS]')
-    Log('Query track: ' + str(query_track))
-    Log('Consensus track: ' + str(consensus_track))
-    Log('Merged track: ' + str(merged_track))
+    Log('Query track: ', toBytes(query_track))
+    Log('Consensus track: ', toBytes(consensus_track))
+    Log('Merged track: ', toBytes(merged_track))
 
   return merged_track
