@@ -62,6 +62,17 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       else:
         tracks[index] = True
 
+    # Make sure we are on the first disc.
+    if do_quick_match:
+      first_file = files[0]
+      try:
+        (artist, album, title, track, disc, album_artist, compil) = AudioFiles.getInfoFromTag(first_file, language)
+        if disc is not None and disc > 1:
+          Log('Skipping quick match because of non-first disc.')
+          do_quick_match = False
+      except:
+        pass
+
     artist = None
     album = None
 
