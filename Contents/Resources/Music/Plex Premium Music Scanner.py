@@ -245,6 +245,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       args += '&tracks[%d].album=%s' % (i, quote(toBytes(track.album), ''))
     if track.index:
       args += '&tracks[%d].index=%s' % (i, track.index)
+    if track.disc:
+      args += '&tracks[%d].parentIndex=%s' % (i, track.disc)
 
   Log('Running Gracenote match with fingerprinting: %d and mixedContent: %d and multiple: %d' % (fingerprint, mixed, multiple))
   url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d&multiple=%d%s&lang=%s' % (fingerprint, mixed, multiple, args, language)
