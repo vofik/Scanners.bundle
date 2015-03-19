@@ -52,7 +52,8 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
 
       if track == None:
         # See if we have a tracknumber in the title; if so, extract and strip it.
-        m = re.match("^([0-9]{1,3})([^0-9].*)$", os.path.basename(f))
+        file = os.path.splitext(os.path.basename(f))[0]
+        m = re.match("^([0-9]{1,3})([^0-9].*)$", file) or re.match(".*[ \-\.]+([0-9]{2})[ \-\.]+([^0-9].*)$", file) or re.match("^[a-f]([0-9]{2})[ \-\.]+([^0-9].*)$", file)
         if m:
           track, new_title = int(m.group(1)), m.group(2)
           
@@ -264,4 +265,5 @@ def getInfoFromTag(filename, language):
     if tag['compilation'][0] == True: compil = '1'
   except: 
     pass
+
   return (artist, album, title, track, disc, TPE2, compil)
