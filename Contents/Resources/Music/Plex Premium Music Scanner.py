@@ -157,16 +157,39 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
     discs = preprocess_tracks(query_list)
     
     # OK, perform the lookup for each disc.
+    match1 = albums1 = match2 = albums2 = 0
     for tracks in discs:
-      lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
+      (match, albums) = lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
+      match1 += match
+      albums1 += albums
+      
+    # If the match looked complicated, try it the other way.
+    if albums1 > 1 or match1 < 75:
+      match2 = albums2 = 0
+      other_result_list = []
+      for tracks in discs:
+        (match, albums) = lookup(tracks, other_result_list, language=language, fingerprint=not fingerprint, mixed=mixed)
+        match2 += match
+        albums2 += albums
+      
+      if albums2 <= albums1 and match2 >= match1:
+        Log('The other way was a better match, keeping.')
+        result_list = other_result_list
+        
+    # If we have a crappy match, don't use it.
+    if max(match1, match2) < 50.0:
+      Log('That was terrible, let''s not use it')
+      result_list = []
 
+    # Finalize the results.
     del media_list[:]
     if len(result_list) > 0:
+      # Gracenote results.
       for result in result_list:
         media_list.append(result)
-    else:  # We bailed during the GN lookup, fall back to tags.
+    else:
+      # We bailed during the GN lookup, fall back to tags.
       AudioFiles.Process(path, files, media_list, subdirs, root)
-
 
 def preprocess_tracks(query_list):
   tracks_by_disc = defaultdict(list)
@@ -254,7 +277,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     res = minidom.parse(urlopen(url))
   except Exception, e:
     Log('Error parsing Gracenote response: ' + str(e))
-    return
+    return (0, 0)
 
   # See which tracks we got matches for.
   matched_tracks = {track.getAttribute('userData'): track for track in res.getElementsByTagName('Track')}
@@ -287,31 +310,6 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     Log('Found years: ' + str(Counter(year_list).most_common()))
   
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
-
-  Log('Found %d unique artist(s) and %d unique album(s); matched %d of %d tracks with %d unique indices.' % (unique_artists, unique_albums, len(res.getElementsByTagName('Track')), len(query_list), unique_indices))
-  if (len(matched_tracks) < 3 or len(matched_tracks) < len(query_list) or unique_artists > 1 or unique_albums > 1 or unique_indices != len(matched_tracks)) and not fingerprint and not mixed:
-    Log('Re-running with fingerprinting.')
-    new_result_list = []
-    lookup(query_list, new_result_list, language, True, mixed)
-
-    # Fast return if fallback search turned up nothing.
-    if not new_result_list:
-      return
-    
-    # If fingerprinting made something pretty sane go all batshit crazy, let's not use it.
-    albums = set([track.album_guid for track in new_result_list])
-
-    # Compute text difference between text and fingerprint album results as compared to input.
-    text_album_difference = LevenshteinDistance(query_list[0].album, consensus_track.album)
-    fingerprint_album_difference = LevenshteinDistance(consensus_track.album, new_result_list[0].album)
-    
-    if sane_input_tracks and len(albums) > 1 and unique_albums == 1:
-      Log('Looks like fingerprinting went crazy, we\'ll back away slowly.')
-    elif sane_input_tracks and fingerprint_album_difference > text_album_difference:
-      Log('Looks like fingerprinting picked the wrong album, ignoring.')
-    else:
-      result_list.extend(new_result_list)
-      return
   
   # If we don't have some kind of match for most of the tracks in the query, chances are Gracenote doesn't know about this album,
   # and we don't want to aggressively merge with the wrong thing.
@@ -327,10 +325,11 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     else:
       Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(matched_tracks), len(query_list)))
       del result_list[:]
-      return
+      return (0, 0)
 
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
+  perfect_matches = 0
   
   for i, query_track in enumerate(query_list):
     if str(i) in matched_tracks:
@@ -347,7 +346,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         # If the track index changed, and we didn't perfectly match everything, consider this a bad sign that something
         # went wrong during fingerprint matching and abort.
         #
-        if query_track.index and int(track.getAttribute('index') or -1) != query_track.index and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
+        if (not query_track.index or query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
           Log('Track index changed (%s -> %s) and match was not perfect, using merged hints.' % (query_track.index, track.getAttribute('index')))
           result_list.append(merge_hints(query_track, consensus_track, parts[i]))
           continue
@@ -386,6 +385,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
           Log('Adding matched track: ' + str(t))
 
         result_list.append(t)
+        perfect_matches += 1
 
       except Exception, e:
         Log('Error adding track: ' + str(e))
@@ -412,6 +412,14 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   for t in result_list:
     t.album = re.sub('[ \-:]*\[*disc [0-9]\][ \-]*', '', t.album, flags=re.IGNORECASE).strip()
 
+  # Compute a score.
+  match_percentage = (perfect_matches / float(len(query_list))) * 100.0
+  number_of_albums = len(set([track.album_guid for track in result_list]))
+  
+  Log("STAT MATCH PERCENTAGE: %f" % match_percentage)
+  Log("STAT ALBUMS MATCHED: %d" % number_of_albums)
+  
+  return (match_percentage, number_of_albums)
 
 def merge_hints(query_track, consensus_track, part):
 
