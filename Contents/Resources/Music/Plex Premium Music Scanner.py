@@ -185,6 +185,10 @@ def preprocess_tracks(query_list):
   for t in sorted_tracks:
     if t.index < last_index:
       disc += 1
+      if t.index != 1:
+        Log("Disc %d didn't start with first track, we won't use this method." % disc)
+        tracks_by_disc = defaultdict(list)
+        break
     tracks_by_disc[disc].append(t)
     last_index = t.index
   
