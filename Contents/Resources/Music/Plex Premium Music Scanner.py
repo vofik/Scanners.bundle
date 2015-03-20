@@ -314,22 +314,6 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     Log('Found years: ' + str(Counter(year_list).most_common()))
   
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
-  
-  # If we don't have some kind of match for most of the tracks in the query, chances are Gracenote doesn't know about this album,
-  # and we don't want to aggressively merge with the wrong thing.
-  #
-  if float(len(matched_tracks)) / float(len(query_list)) < .8:
-    
-    # Before we bail completely, see if bonus tracks were screwing us up.
-    bonus_tracks = len([t for t in query_list if 'bonus' in t.name.lower()])
-    if float(len(matched_tracks)) / float(len(query_list) - bonus_tracks) >= .8:
-      Log('Only matched %d out of %d tracks, but found %d bonus tracks, pressing on.' % (len(matched_tracks), len(query_list), bonus_tracks))
-
-    # Okay, things really aren't looking good here, let's fall back.
-    else:
-      Log('Didn\'t find enough track matches (%d out of %d), falling back to file hints.' % (len(matched_tracks), len(query_list)))
-      del result_list[:]
-      return (0, 0)
 
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
