@@ -325,8 +325,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         track = matched_tracks[str(i)]
 
         # Index doesn't match and disc doesn't match.
-        Log("Checking (%s -> %s) and track (%s -> %s) mismatched, we're going to treat this as a bad match." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
-        if (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != track.getAttribute('parentIndex')):
+        Log("Checking disc (%s -> %s) and track (%s -> %s)." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
+        if (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex') or 1)):
           Log("Both disc (%s -> %s) and track (%s -> %s) mismatched, we're going to treat this as a bad match." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
           tracks_without_matches.append((query_track, parts[i]))
           continue
