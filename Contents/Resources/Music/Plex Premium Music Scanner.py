@@ -293,15 +293,19 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       Log(track.toxml())
 
   # Look through the results and determine some consensus metadata so we can do a better job of keeping rogue and 
-  # unmatched tracks together.
+  # unmatched tracks together. We're going to weight matches in the first third of the tracks twice as high, for 
+  # cases in which matches come through for the last half of tracks.
   #
-  artist_list = [(t[1].getAttribute('grandparentGUID'), t[1].getAttribute('grandparentTitle'), t[1].getAttribute('grandparentThumb')) for t in matched_tracks.items()]
-  artist_consensus = Counter(artist_list).most_common()[0][0] if len(artist_list) > 0 else ('', '', '')
+  sorted_items = sorted(matched_tracks.items(), key= lambda t: int(t[1].getAttribute('parentIndex') or 1)*100 + int(t[1].getAttribute('index') or -1))
+  sorted_items = sorted_items[0:len(sorted_items)/3] + sorted_items
   
-  album_list = [(t[1].getAttribute('parentGUID'), t[1].getAttribute('parentTitle'), t[1].getAttribute('parentThumb')) for t in matched_tracks.items()]
+  artist_list = [(t[1].getAttribute('grandparentGUID'), t[1].getAttribute('grandparentTitle'), t[1].getAttribute('grandparentThumb')) for t in sorted_items]
+  artist_consensus = Counter(artist_list).most_common()[0][0] if len(artist_list) > 0 else ('', '', '')
+
+  album_list = [(t[1].getAttribute('parentGUID'), t[1].getAttribute('parentTitle'), t[1].getAttribute('parentThumb')) for t in sorted_items]
   album_consensus = Counter(album_list).most_common()[0][0] if len(album_list) > 0 else ('', '', '')
   
-  year_list = [t[1].getAttribute('year') for t in matched_tracks.items()]
+  year_list = [t[1].getAttribute('year') for t in sorted_items]
   year_consensus = Counter(year_list).most_common()[0][0] if len(year_list) > 0 else -1
 
   if DEBUG:
