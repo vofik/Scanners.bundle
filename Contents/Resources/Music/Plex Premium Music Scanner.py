@@ -178,7 +178,7 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
         
     # If we have a crappy match, don't use it.
     if max(match1, match2) < 50.0:
-      Log('That was terrible, let''s not use it')
+      Log('That was terrible, let us not use it.')
       result_list = []
 
     # Finalize the results.
@@ -203,6 +203,7 @@ def preprocess_tracks(query_list):
   
   # Otherwise, let's sort by filename, and see if we have clusters of tracks.
   sorted_tracks = sorted(query_list, key=lambda track: track.parts[0])
+  
   disc = 1
   last_index = 0
   for t in sorted_tracks:
@@ -282,7 +283,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # See which tracks we got matches for.
   matched_tracks = {track.getAttribute('userData'): track for track in res.getElementsByTagName('Track')}
 
-  # If we didn't match all tracks, or we got mixed artists/albums, redo with fingerprinting.
+  # Figure out the unique artists/albums/indexes.
   unique_artists = len(set([t[1].getAttribute('grandparentTitle') for t in matched_tracks.items()]))
   unique_albums = len(set([t[1].getAttribute('parentTitle') for t in matched_tracks.items()]))
   unique_indices = len(set([t[1].getAttribute('index') for t in matched_tracks.items()]))
