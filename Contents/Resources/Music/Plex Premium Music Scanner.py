@@ -343,6 +343,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         if sane_input_tracks and track.getAttribute('parentGUID') != consensus_track.album_guid:
           Log('Had sane input but track %s got split, using merged hints.' % track.getAttribute('index'))
           result_list.append(merge_hints(query_track, consensus_track, parts[i]))
+          perfect_matches += 0.75
           continue
 
         t = Media.Track(
