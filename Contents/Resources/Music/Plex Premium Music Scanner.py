@@ -1,7 +1,6 @@
 #
-# Copyright (c) 2010-2014 Plex Development Team. All rights reserved.
+# Copyright (c) 2015 Plex Development Team. All rights reserved.
 #
-
 import re
 import os.path
 from urllib import urlopen, quote
@@ -13,14 +12,13 @@ import mutagen
 from Utils import Log, LevenshteinDistance, LevenshteinRatio
 from UnicodeHelper import toBytes
 
-
 DEBUG = True
-
 
 def Scan(path, files, media_list, subdirs, language=None, root=None):
 
   # Scan for audio files.
   AudioFiles.Scan(path, files, media_list, subdirs, root)
+  
   root_str = root or ''
   loc_str = os.path.join(root_str, path)
   Log('Scanning: ' + loc_str)
@@ -222,7 +220,6 @@ def preprocess_tracks(query_list):
   # Otherwise, let's consider it a single disc.
   return [query_list]
 
-
 def has_sane_track_indexes(query_list):
   indexes = []
   for track in query_list:
@@ -241,7 +238,6 @@ def has_sane_track_indexes(query_list):
 
   return contiguous or unique
 
-
 def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False, multiple=False):
 
   # See if input looks like a sane album
@@ -250,6 +246,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # Build up the query with the contents of the query list.
   args = ''
   parts = {}
+
+  Log('Running Gracenote match on %d tracks with fingerprinting: %d and mixedContent: %d and multiple: %d' % (len(query_list), fingerprint, mixed, multiple))
   for i, track in enumerate(query_list):
     
     # We need to pass at least a path and an identifier for each track that we know about.
@@ -271,8 +269,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       args += '&tracks[%d].index=%s' % (i, track.index)
     if track.disc:
       args += '&tracks[%d].parentIndex=%s' % (i, track.disc)
+    Log(" - %s/%s - %s/%d - %s" % (track.artist, track.album, track.disc, track.index, track.name))
 
-  Log('Running Gracenote match with fingerprinting: %d and mixedContent: %d and multiple: %d' % (fingerprint, mixed, multiple))
   url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d&multiple=%d%s&lang=%s' % (fingerprint, mixed, multiple, args, language)
   try:
     res = minidom.parse(urlopen(url))
@@ -291,7 +289,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   if DEBUG:
     Log('Raw track matches:')
     for track in [match[1] for match in matched_tracks.items()]:
-      Log(track.toxml())
+      Log("  - %s / %s - %s/%s - %s" %(track.getAttribute('grandparentTitle'), track.getAttribute('parentTitle'), track.getAttribute('parentIndex'), track.getAttribute('index'), track.getAttribute('title')))
 
   # Look through the results and determine some consensus metadata so we can do a better job of keeping rogue and 
   # unmatched tracks together. We're going to weight matches in the first third of the tracks twice as high, for 
@@ -309,11 +307,6 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   year_list = [t[1].getAttribute('year') for t in sorted_items]
   year_consensus = Counter(year_list).most_common()[0][0] if len(year_list) > 0 else -1
 
-  if DEBUG:
-    Log('Found artists: ' + str(Counter(artist_list).most_common()))
-    Log('Found albums: ' + str(Counter(album_list).most_common()))
-    Log('Found years: ' + str(Counter(year_list).most_common()))
-  
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
 
   # Add Gracenote results to the result_list where we have them.
@@ -326,7 +319,6 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         track = matched_tracks[str(i)]
 
         # Index doesn't match and disc doesn't match.
-        Log("Checking disc (%s -> %s) and track (%s -> %s)." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
         if (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex') or 1)):
           Log("Both disc (%s -> %s) and track (%s -> %s) mismatched, we're going to treat this as a bad match." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
           tracks_without_matches.append((query_track, parts[i]))
@@ -374,6 +366,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
             t.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist.png'
           Log('Adding matched track: ' + str(t))
 
+        # Add the result.
+        Log('Adding matched track: %s / %s / disc %0s track %02d - %s' % (t.artist, t.album, t.disc, t.index, t.name))
         result_list.append(t)
         perfect_matches += 1
 
@@ -392,7 +386,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         
   # Now consider the unmatched tracks. If they were the minority, then just merge them in.
   if len(tracks_without_matches) / float(len(query_list)) < 0.3:
-    Log('Minority of tracks were unmatched, hooking them back up.')
+    Log('Minority of tracks (%d) were unmatched, hooking them back up.' % len(tracks_without_matches))
     result_list.extend([merge_hints(tup[0], consensus_track, tup[1]) for tup in tracks_without_matches])
   else:
     Log('The majority of tracks were unmatched, letting them be.')
@@ -426,13 +420,6 @@ def merge_hints(query_track, consensus_track, part):
   merged_track.parts.append(part)
 
   if DEBUG:
-    # merged_track.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album_match.png'
-    # merged_track.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist_match.png'
-    merged_track.album_thumb_url = toBytes(consensus_track.album_thumb_url)
-    merged_track.artist_thumb_url = toBytes(consensus_track.artist_thumb_url)
     merged_track.name = toBytes(merged_track.name + ' [MERGED GN MISS]')
-    Log('Query track: ', toBytes(query_track))
-    Log('Consensus track: ', toBytes(consensus_track))
-    Log('Merged track: ', toBytes(merged_track))
 
   return merged_track
