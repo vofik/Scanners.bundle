@@ -425,8 +425,14 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     result_list.extend([tup[0] for tup in tracks_without_matches])
     
   # Last, but not least, let's clean up the results. Multi-disc album titles have cruft in them.
+  # Also, if we find a disc, make sure it matches what we're setting, since some albums are
+  # returned named correctly but claiming to be disc 1.
+  #
   for t in result_list:
-    t.album = re.sub('[ \-:]*\[*disc [0-9]\][ \-]*', '', t.album, flags=re.IGNORECASE).strip()
+    m = re.search('[ \-:]*\[*disc ([0-9])\][ \-]*', t.album, flags=re.IGNORECASE)
+    if m:
+      t.disc = int(m.group(1))
+      t.album = t.album[:m.start()].strip()
 
   # Compute a score.
   match_percentage = (perfect_matches / float(len(query_list))) * 100.0
