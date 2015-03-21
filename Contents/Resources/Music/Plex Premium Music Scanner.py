@@ -287,7 +287,9 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     if track.artist and track.artist != 'Various Artists':
       args += '&tracks[%d].artist=%s' % (i, quote(toBytes(track.artist), ''))
     if track.album_artist:
-      args += '&tracks[%d].albumArtist=%s' % (i, quote(toBytes(track.album_artist), ''))
+      args += '&tracks[%d].albumArtist=%s' % (i, quote(toBytes(track.album_artist), ''))      
+    elif track.artist and track.artist != 'Various Artists':
+      args += '&tracks[%d].albumArtist=%s' % (i, quote(toBytes(track.artist), ''))
     if track.album and track.album != '[Unknown Album]':
       args += '&tracks[%d].album=%s' % (i, quote(toBytes(track.album), ''))
     if track.index:
