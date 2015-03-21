@@ -391,12 +391,17 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
             t.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album.png'
           if t.artist_thumb_url == 'http://':
             t.artist_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_artist.png'
-          Log('Adding matched track: ' + str(t))
+        
+        # Subtract from score if the index didn't match, and use the parsed index, it's likely to be more accurate.
+        if query_track.index and int(track.getAttribute('index') or -1) != query_track.index:
+          perfect_matches += 0.75
+          t.index = query_track.index
+        else:
+          perfect_matches += 1
 
         # Add the result.
         Log('Adding matched track: %s / %s / disc %0s track %02d - %s' % (t.artist, t.album, t.disc, t.index, t.name))
         result_list.append(t)
-        perfect_matches += 1
 
       except Exception, e:
         Log('Error adding track: ' + str(e))
