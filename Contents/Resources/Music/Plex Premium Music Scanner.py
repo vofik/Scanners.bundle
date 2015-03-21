@@ -32,7 +32,7 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
   mixed = False
 
   # Make sure we're looking at a leaf directory (no audio files below here).
-  if subdirs:
+  if len(subdirs) > 0:
     Log('Found directories below this one; won\'t attempt quick matching.')
     do_quick_match = False
 
