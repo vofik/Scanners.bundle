@@ -151,31 +151,25 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       query_list = list(media_list)
       fingerprint = True
     
-    # Preprocess for multi-discs.
-    discs = preprocess_tracks(query_list)
+    # Try as-is first (ask for everything at once).
+    discs = [query_list]
+    final_match = run_queries(discs, result_list, language, fingerprint, mixed)
     
-    # OK, perform the lookup for each disc.
-    match1 = albums1 = match2 = albums2 = 0
-    for tracks in discs:
-      (match, albums) = lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
-      match1 += match
-      albums1 += albums
-      
-    # If the match looked complicated, try it the other way.
-    if albums1 > 1 or match1 < 75:
-      match2 = albums2 = 0
-      other_result_list = []
-      for tracks in discs:
-        (match, albums) = lookup(tracks, other_result_list, language=language, fingerprint=not fingerprint, mixed=mixed)
-        match2 += match
-        albums2 += albums
-      
-      if albums2 <= albums1 and match2 >= match1:
-        Log('The other way was a better match, keeping.')
-        result_list = other_result_list
+    # If the match was still shitty, and it looks like we have multiple discs, try splitting.
+    if final_match < 75:
+      discs = group_tracks_by_disc(query_list)
+      if len(discs) > 1:
+        Log('Result still looked bad, we will try splitting into separate per-disc queries.')
+        other_result_list = []
+        other_match = run_queries(discs, other_result_list, language, fingerprint, mixed)
+        
+        if other_match > final_match:
+          Log('The split result was best, we will use it.')
+          result_list = other_result_list
+          final_match = other_match
         
     # If we have a crappy match, don't use it.
-    if max(match1, match2) < 50.0:
+    if final_match < 50.0:
       Log('That was terrible, let us not use it.')
       result_list = []
 
@@ -189,7 +183,38 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       # We bailed during the GN lookup, fall back to tags.
       AudioFiles.Process(path, files, media_list, subdirs, root)
 
-def preprocess_tracks(query_list):
+def run_queries(discs, result_list, language, fingerprint, mixed):
+
+  # Try a text-based match first.
+  (match1, albums1) = run_query_on_discs(discs, result_list, language, fingerprint, mixed)
+  final_match = match1
+  
+  # If the result looks shoddy, try with fingerprinting.
+  if albums1 > len(discs) or match1 < 75:
+    Log("Not impressed, trying the other way (fingerprinting: %s)" % (not fingerprint))
+    other_result_list = []
+    (match2, albums2) = run_query_on_discs(discs, other_result_list, language, not fingerprint, mixed)
+    
+    if match2 > match1 or (match2 == match1 and albums2 < albums1):
+      Log('The other way gave a better match, keeping.')
+      result_list[:] = other_result_list
+      final_match = match2
+      
+  return final_match
+
+def run_query_on_discs(discs, result_list, language, fingerprint, mixed):
+  match1 = albums1 = total_tracks = 0
+  for tracks in discs:
+    (match, albums1) = lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
+    total_tracks += len(tracks)
+    match1 += match * len(tracks)
+
+  match1 = match1 / float(total_tracks)
+  Log("Querying all discs generated %d albums and a total match of %d" % (albums1, match1))
+
+  return (match1, albums1)
+
+def group_tracks_by_disc(query_list):
   tracks_by_disc = defaultdict(list)
   
   # See if we have multiple disks, first checking tags.
