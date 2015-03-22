@@ -81,9 +81,11 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       for i in range(3):
         if i < len(files):
           tags = mutagen.File(files[i], easy=True)
-
-          this_artist = tags['artist'][0] if 'artist' in tags else tags['albumartist'][0] if 'albumartist' in tags else tags['TPE2'][0] if 'TPE2' in tags else None
-          this_album = tags['album'][0] if 'album' in tags else None
+          this_artist = this_album = None
+          
+          if tags:
+            this_artist = tags['artist'][0] if 'artist' in tags else tags['albumartist'][0] if 'albumartist' in tags else tags['TPE2'][0] if 'TPE2' in tags else None
+            this_album = tags['album'][0] if 'album' in tags else None
 
           if artist and artist != this_artist:
             Log('Found different artists in tags (%s vs. %s); doing expensive matching.' % (artist, this_artist))
