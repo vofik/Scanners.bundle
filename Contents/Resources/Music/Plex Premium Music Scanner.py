@@ -188,16 +188,16 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
 def run_queries(discs, result_list, language, fingerprint, mixed, do_quick_match):
 
   # Try a text-based match first.
-  (match1, albums1) = run_query_on_discs(discs, result_list, language, fingerprint, mixed, do_quick_match)
+  (match1, albums1, arts1) = run_query_on_discs(discs, result_list, language, fingerprint, mixed, do_quick_match)
   final_match = match1
   
   # If the result looks shoddy, try with fingerprinting.
-  if albums1 > len(discs) or match1 < 75:
+  if albums1 > len(discs) or match1 < 75 or arts1 == 0:
     Log("Not impressed, trying the other way (fingerprinting: %s)" % (not fingerprint))
     other_result_list = []
-    (match2, albums2) = run_query_on_discs(discs, other_result_list, language, not fingerprint, mixed, do_quick_match)
+    (match2, albums2, arts2) = run_query_on_discs(discs, other_result_list, language, not fingerprint, mixed, do_quick_match)
     
-    if match2 > match1 or (match2 == match1 and albums2 < albums1):
+    if match2 > match1 or (match2 == match1 and (albums2 < albums1 or arts2 > arts1)):
       Log('The other way gave a better match, keeping.')
       result_list[:] = other_result_list
       final_match = match2
@@ -207,14 +207,14 @@ def run_queries(discs, result_list, language, fingerprint, mixed, do_quick_match
 def run_query_on_discs(discs, result_list, language, fingerprint, mixed, do_quick_match):
   match1 = albums1 = total_tracks = 0
   for tracks in discs:
-    (match, albums1) = lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed, do_quick_match=do_quick_match)
+    (match, albums1, arts1) = lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed, do_quick_match=do_quick_match)
     total_tracks += len(tracks)
     match1 += match * len(tracks)
 
   match1 = match1 / float(total_tracks)
   Log("Querying all discs generated %d albums and a total match of %d" % (albums1, match1))
 
-  return (match1, albums1)
+  return (match1, albums1, arts1)
 
 def group_tracks_by_disc(query_list):
   tracks_by_disc = defaultdict(list)
@@ -305,7 +305,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     res = minidom.parse(urlopen(url))
   except Exception, e:
     Log('Error parsing Gracenote response: ' + str(e))
-    return (0, 0)
+    return (0, 0, 0)
 
   # See which tracks we got matches for.
   matched_tracks = {track.getAttribute('userData'): track for track in res.getElementsByTagName('Track')}
@@ -439,11 +439,13 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # Compute a score.
   match_percentage = (perfect_matches / float(len(query_list))) * 100.0
   number_of_albums = len(set([track.album_guid for track in result_list]))
+  number_of_album_art = reduce(lambda count, (track): count + 1 if track.album_thumb_url is not None and len(track.album_thumb_url) > 0 else 0, result_list, 0)
   
   Log("STAT MATCH PERCENTAGE: %f" % match_percentage)
   Log("STAT ALBUMS MATCHED: %d" % number_of_albums)
+  Log("STAT ALBUM ART: %d" % number_of_album_art)
   
-  return (match_percentage, number_of_albums)
+  return (match_percentage, number_of_albums, number_of_album_art)
 
 def merge_hints(query_track, consensus_track, part, do_quick_match):
 
