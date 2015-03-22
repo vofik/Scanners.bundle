@@ -141,7 +141,7 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
           t = Media.Track(artist=toBytes(artist), album=toBytes(album), title=toBytes(title), index=int(index))
           t.parts.append(f)
 
-          Log('\tAdding: %s - %s' % (index, title))
+          Log(' - Adding: %s - %s' % (index, title))
           query_list.append(t)
 
         except Exception as e:
