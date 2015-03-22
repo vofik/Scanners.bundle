@@ -453,6 +453,8 @@ def merge_hints(query_track, consensus_track, part):
     artist=toBytes(consensus_track.artist),
     title=toBytes(query_track.name),
     disc=toBytes(consensus_track.disc),
+    album_thumb_url=toBytes(consensus_track.album_thumb_url),
+    artist_thumb_url=toBytes(consensus_track.artist_thumb_url),
     year=toBytes(consensus_track.year),
     album_guid=toBytes(consensus_track.album_guid),
     artist_guid=toBytes(consensus_track.artist_guid))
