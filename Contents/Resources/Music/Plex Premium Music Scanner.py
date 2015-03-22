@@ -420,8 +420,9 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         
   # Now consider the unmatched tracks. If they were the minority, then just merge them in.
   if len(tracks_without_matches) / float(len(query_list)) < 0.3:
-    Log('Minority of tracks (%d) were unmatched, hooking them back up.' % len(tracks_without_matches))
-    result_list.extend([merge_hints(tup[0], consensus_track, tup[1], do_quick_match) for tup in tracks_without_matches])
+    if len(tracks_without_matches) > 0:
+      Log('Minority of tracks (%d) were unmatched, hooking them back up.' % len(tracks_without_matches))
+      result_list.extend([merge_hints(tup[0], consensus_track, tup[1], do_quick_match) for tup in tracks_without_matches])
   else:
     Log('The majority of tracks were unmatched, letting them be.')
     result_list.extend([tup[0] for tup in tracks_without_matches])
