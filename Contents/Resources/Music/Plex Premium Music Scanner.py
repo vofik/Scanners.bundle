@@ -452,9 +452,7 @@ def merge_hints(query_track, consensus_track, part, do_quick_match):
   # If we did a quick match, read tags, as it may have much better tags.
   track_title = query_track.name
   if do_quick_match:
-    tags = mutagen.File(part, easy=True)
-    if tags and 'title' in tags:
-      track_title = tags['title'][0]
+    track_title = improve_from_tag(track_title, part, 'title')
 
   merged_track = Media.Track(
     index=int(query_track.index) if query_track.index is not None else -1,
@@ -474,3 +472,10 @@ def merge_hints(query_track, consensus_track, part, do_quick_match):
     merged_track.name = toBytes(merged_track.name + ' [MERGED GN MISS]')
 
   return merged_track
+  
+def improve_from_tag(existing, file, tag):
+  tags = mutagen.File(file, easy=True)
+  if tags and tag in tags:
+    existing = tags[tag][0]
+    
+  return toBytes(existing)
