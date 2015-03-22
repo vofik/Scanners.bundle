@@ -155,7 +155,7 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
     
     # Try as-is first (ask for everything at once).
     discs = [query_list]
-    final_match = run_queries(discs, result_list, language, fingerprint, mixed)
+    final_match = run_queries(discs, result_list, language, fingerprint, mixed, do_quick_match)
     
     # If the match was still shitty, and it looks like we have multiple discs, try splitting.
     if final_match < 75:
@@ -163,7 +163,7 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       if len(discs) > 1:
         Log('Result still looked bad, we will try splitting into separate per-disc queries.')
         other_result_list = []
-        other_match = run_queries(discs, other_result_list, language, fingerprint, mixed)
+        other_match = run_queries(discs, other_result_list, language, fingerprint, mixed, do_quick_match)
         
         if other_match > final_match:
           Log('The split result was best, we will use it.')
@@ -185,17 +185,17 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       # We bailed during the GN lookup, fall back to tags.
       AudioFiles.Process(path, files, media_list, subdirs, root)
 
-def run_queries(discs, result_list, language, fingerprint, mixed):
+def run_queries(discs, result_list, language, fingerprint, mixed, do_quick_match):
 
   # Try a text-based match first.
-  (match1, albums1) = run_query_on_discs(discs, result_list, language, fingerprint, mixed)
+  (match1, albums1) = run_query_on_discs(discs, result_list, language, fingerprint, mixed, do_quick_match)
   final_match = match1
   
   # If the result looks shoddy, try with fingerprinting.
   if albums1 > len(discs) or match1 < 75:
     Log("Not impressed, trying the other way (fingerprinting: %s)" % (not fingerprint))
     other_result_list = []
-    (match2, albums2) = run_query_on_discs(discs, other_result_list, language, not fingerprint, mixed)
+    (match2, albums2) = run_query_on_discs(discs, other_result_list, language, not fingerprint, mixed, do_quick_match)
     
     if match2 > match1 or (match2 == match1 and albums2 < albums1):
       Log('The other way gave a better match, keeping.')
@@ -204,10 +204,10 @@ def run_queries(discs, result_list, language, fingerprint, mixed):
       
   return final_match
 
-def run_query_on_discs(discs, result_list, language, fingerprint, mixed):
+def run_query_on_discs(discs, result_list, language, fingerprint, mixed, do_quick_match):
   match1 = albums1 = total_tracks = 0
   for tracks in discs:
-    (match, albums1) = lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed)
+    (match, albums1) = lookup(tracks, result_list, language=language, fingerprint=fingerprint, mixed=mixed, do_quick_match=do_quick_match)
     total_tracks += len(tracks)
     match1 += match * len(tracks)
 
@@ -265,7 +265,7 @@ def has_sane_track_indexes(query_list):
 
   return contiguous or unique
 
-def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False, multiple=False):
+def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False, multiple=False, do_quick_match=False):
 
   # See if input looks like a sane album
   sane_input_tracks = has_sane_track_indexes(query_list)
@@ -358,13 +358,13 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         #
         if (not query_track.index or query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
           Log('Track index changed (%s -> %s) and match was not perfect, using merged hints.' % (query_track.index, track.getAttribute('index')))
-          result_list.append(merge_hints(query_track, consensus_track, parts[i]))
+          result_list.append(merge_hints(query_track, consensus_track, parts[i], do_quick_match))
           continue
 
         # If we had sane input, but some tracks got put into a different album, don't allow that.
         if sane_input_tracks and track.getAttribute('parentGUID') != consensus_track.album_guid:
           Log('Had sane input but track %s got split, using merged hints.' % track.getAttribute('index'))
-          result_list.append(merge_hints(query_track, consensus_track, parts[i]))
+          result_list.append(merge_hints(query_track, consensus_track, parts[i], do_quick_match))
           perfect_matches += 0.75
           continue
 
@@ -413,7 +413,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
 
       if unique_albums == 1 and unique_artists == 1:
         Log('Other positive Gracenote matches were all from the same artist and album (%s, %s); merging with Gracenote hints.' % (consensus_track.artist, consensus_track.album))
-        result_list.append(merge_hints(query_track, consensus_track, parts[i]))
+        result_list.append(merge_hints(query_track, consensus_track, parts[i], do_quick_match))
       else:
         Log('No matches, just appending query track')
         tracks_without_matches.append((query_track, parts[i]))
@@ -421,7 +421,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # Now consider the unmatched tracks. If they were the minority, then just merge them in.
   if len(tracks_without_matches) / float(len(query_list)) < 0.3:
     Log('Minority of tracks (%d) were unmatched, hooking them back up.' % len(tracks_without_matches))
-    result_list.extend([merge_hints(tup[0], consensus_track, tup[1]) for tup in tracks_without_matches])
+    result_list.extend([merge_hints(tup[0], consensus_track, tup[1], do_quick_match) for tup in tracks_without_matches])
   else:
     Log('The majority of tracks were unmatched, letting them be.')
     result_list.extend([tup[0] for tup in tracks_without_matches])
@@ -445,13 +445,20 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   
   return (match_percentage, number_of_albums)
 
-def merge_hints(query_track, consensus_track, part):
+def merge_hints(query_track, consensus_track, part, do_quick_match):
+
+  # If we did a quick match, read tags, as it may have much better tags.
+  track_title = query_track.name
+  if do_quick_match:
+    tags = mutagen.File(part, easy=True)
+    if tags and 'title' in tags:
+      track_title = tags['title'][0]
 
   merged_track = Media.Track(
     index=int(query_track.index) if query_track.index is not None else -1,
     album=toBytes(consensus_track.album),
     artist=toBytes(consensus_track.artist),
-    title=toBytes(query_track.name),
+    title=toBytes(track_title),
     disc=toBytes(consensus_track.disc),
     album_thumb_url=toBytes(consensus_track.album_thumb_url),
     artist_thumb_url=toBytes(consensus_track.artist_thumb_url),
