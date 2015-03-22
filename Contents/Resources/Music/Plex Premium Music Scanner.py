@@ -348,8 +348,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       try:
         track = matched_tracks[str(i)]
 
-        # Index doesn't match and disc doesn't match.
-        if (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex') or 1)):
+        # Index doesn't match and disc doesn't match and there is more than one album involved.
+        if unique_albums > 1 and (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex') or 1)):
           Log("Both disc (%s -> %s) and track (%s -> %s) mismatched, we're going to treat this as a bad match." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
           tracks_without_matches.append((query_track, parts[i]))
           track_mismatches += 1
@@ -400,9 +400,17 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         # Subtract from score if the index didn't match, and use the parsed index, it's likely to be more accurate.
         if query_track.index and int(track.getAttribute('index') or -1) != query_track.index:
           Log('Imperfect track index match, less than full bonus and respect original track index.')
-          perfect_matches += 0.75
+          
+          # Penalize more if disc mismatches as well.
+          if query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex')):
+            # This looks pretty bad.
+            perfect_matches += 0.25
+          else:
+            # This is less bad, and we steal the index from the query, since otherwise we might end up with dupes.
+            perfect_matches += 0.75
+            t.index = query_track.index
+            
           track_mismatches += 1
-          t.index = query_track.index
         else:
           perfect_matches += 1
 
