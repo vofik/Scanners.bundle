@@ -298,7 +298,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       args += '&tracks[%d].index=%s' % (i, track.index)
     if track.disc:
       args += '&tracks[%d].parentIndex=%s' % (i, track.disc)
-    Log(" - %s/%s - %s/%d - %s" % (track.artist, track.album, track.disc, track.index, track.name))
+    Log(" - %s/%s - %s/%s - %s" % (track.artist, track.album, track.disc, track.index, track.name))
 
   url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d&multiple=%d%s&lang=%s' % (fingerprint, mixed, multiple, args, language)
   try:
