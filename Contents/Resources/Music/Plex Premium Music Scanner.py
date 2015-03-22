@@ -391,7 +391,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         t.parts.append(parts[int(track.getAttribute('userData'))])
 
         if DEBUG:
-          t.name += ' [GN MATCH]'
+          #t.name += ' [GN MATCH]'
           if t.album_thumb_url == 'http://':
             t.album_thumb_url = 'https://dl.dropboxusercontent.com/u/8555161/no_album.png'
           if t.artist_thumb_url == 'http://':
@@ -489,8 +489,8 @@ def merge_hints(query_track, consensus_track, part, do_quick_match):
 
   merged_track.parts.append(part)
 
-  if DEBUG:
-    merged_track.name = toBytes(merged_track.name + ' [MERGED GN MISS]')
+  #if DEBUG:
+  #  merged_track.name = toBytes(merged_track.name + ' [MERGED GN MISS]')
 
   return merged_track
   
