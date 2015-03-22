@@ -341,6 +341,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
   perfect_matches = 0
+  track_mismatches = 0
   
   for i, query_track in enumerate(query_list):
     if str(i) in matched_tracks:
@@ -351,6 +352,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         if (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex') or 1)):
           Log("Both disc (%s -> %s) and track (%s -> %s) mismatched, we're going to treat this as a bad match." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
           tracks_without_matches.append((query_track, parts[i]))
+          track_mismatches += 1
           continue
 
         # If the track index changed, and we didn't perfectly match everything, consider this a bad sign that something
@@ -359,6 +361,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         if (not query_track.index or query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
           Log('Track index changed (%s -> %s) and match was not perfect, using merged hints.' % (query_track.index, track.getAttribute('index')))
           result_list.append(merge_hints(query_track, consensus_track, parts[i], do_quick_match))
+          track_mismatches += 1
           continue
 
         # If we had sane input, but some tracks got put into a different album, don't allow that.
@@ -396,7 +399,9 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         
         # Subtract from score if the index didn't match, and use the parsed index, it's likely to be more accurate.
         if query_track.index and int(track.getAttribute('index') or -1) != query_track.index:
+          Log('Imperfect track index match, less than full bonus and respect original track index.')
           perfect_matches += 0.75
+          track_mismatches += 1
           t.index = query_track.index
         else:
           perfect_matches += 1
@@ -441,6 +446,13 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   match_percentage = (perfect_matches / float(len(query_list))) * 100.0
   number_of_albums = len(set([track.album_guid for track in result_list]))
   number_of_album_art = reduce(lambda count, (track): count + 1 if track.album_thumb_url is not None and len(track.album_thumb_url) > 0 else 0, result_list, 0)
+  
+  # Some EPs get matches as the "parent" album. Symptoms include reordered tracks, and generally less tracks.
+  if number_of_albums == 1 and (track_mismatches/float(len(query_list)) > 0.5 or match_percentage < 75) and len(query_list) < 9:
+    better_album = improve_from_tag('', query_list[0].parts[0], 'album')
+    if len(better_album) > 0:
+      for track in result_list:
+        track.album = better_album
   
   Log("STAT MATCH PERCENTAGE: %f" % match_percentage)
   Log("STAT ALBUMS MATCHED: %d" % number_of_albums)
