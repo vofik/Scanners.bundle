@@ -102,8 +102,10 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
       
   try: (maxArtistName, maxArtistCount) = sorted(artistDict.items(), key=lambda (k,v): (v,k))[-1]
   except: maxArtistCount = 0
-    
-  percentSameArtist = float(maxArtistCount)/len(albumTracks)
+  
+  percentSameArtist = 0
+  if len(albumTracks) > 0:
+    percentSameArtist = float(maxArtistCount)/len(albumTracks)
     
   #next, iterate through the album keys, and look at the tracks inside each album
   for a in albumsDict.keys():
