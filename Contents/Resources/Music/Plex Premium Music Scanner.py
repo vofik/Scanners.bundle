@@ -339,6 +339,13 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
 
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
 
+  # Sanity check the result if we have sane input.
+  if do_quick_match == True or multiple == False:
+    ratio = LevenshteinRatio(consensus_track.artist, query_list[0].artist)
+    if ratio < 0.50:
+      Log("Distance between matched artist (%s) and sane artist input (%s) was too big (%f)" % (toBytes(consensus_track.artist), query_list[0].artist, ratio))
+      return (0, 0, 0)
+
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
   perfect_matches = 0
