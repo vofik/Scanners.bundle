@@ -80,8 +80,9 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       # See if we have some consensus on artist/album by reading a few tags.
       for i in range(3):
         if i < len(files):
-          tags = mutagen.File(files[i], easy=True)
-          this_artist = this_album = None
+          this_artist = this_album = tags = None
+          try: tags = mutagen.File(files[i], easy=True)
+          except: Log('There was an exception thrown reading tags.')
           
           if tags:
             this_artist = tags['artist'][0] if 'artist' in tags else tags['albumartist'][0] if 'albumartist' in tags else tags['TPE2'][0] if 'TPE2' in tags else None
