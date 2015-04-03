@@ -154,6 +154,9 @@ class ID3(DictProxy, mutagen.Metadata):
                     else:
                         self.unknown_frames.append(frame)
                 self.__unknown_version = self.version
+        except:
+            # invalid sync-safe string, e.g.
+            pass
         finally:
             self._fileobj.close()
             del self._fileobj
