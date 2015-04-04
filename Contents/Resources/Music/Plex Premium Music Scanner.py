@@ -142,6 +142,13 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
 
           # Remove any remaining index-, artist-, and album-related cruft from the head of the track title.
           title = re.sub(r'^[\W\-]+', '', title).strip()
+
+          # Last chance for artist or album prefix.
+          if not strip_artist and title.decode('utf-8').find(artist.lower()) == 0:
+            title = title[len(artist):]
+            
+          if not strip_album and title.decode('utf-8').find(album.lower()) == 0:
+            title = title[len(album):]
       
           t = Media.Track(artist=toBytes(artist), album=toBytes(album), title=toBytes(title), index=int(index))
           t.parts.append(f)
@@ -203,7 +210,7 @@ def run_queries(discs, result_list, language, fingerprint, mixed, do_quick_match
     (match2, albums2, arts2) = run_query_on_discs(discs, other_result_list, language, not fingerprint, mixed, do_quick_match)
     
     if match2 > match1 or (match2 == match1 and (albums2 < albums1 or arts2 > arts1)):
-      Log('The other way gave a better match, keeping.')
+      Log('This way gave a better match, keeping.')
       result_list[:] = other_result_list
       final_match = match2
       
