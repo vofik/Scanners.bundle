@@ -370,6 +370,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       
       # We're suspicous. Let's check the track titles and see how they matched.
       total_track_ratio = 0
+      total_album_ratio = 0
+    
       for i, query_track in enumerate(query_list):
         if str(i) in matched_tracks:
           track_title = improve_from_tag(query_track.name, query_track.parts[0], 'title')
@@ -379,15 +381,23 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
             track_title = track_title[len(query_track.artist):]
                     
           total_track_ratio += LevenshteinRatio(matched_tracks[str(i)].getAttribute('title'), track_title)
+          total_album_ratio += LevenshteinRatio(matched_tracks[str(i)].getAttribute('parentTitle'), query_track.album)
       
       average_track_ratio = total_track_ratio / len(query_list)
-      Log("Total track lev ratio (%f) or an average of %f per track" % (total_track_ratio, average_track_ratio))
+      average_album_ratio = total_album_ratio / len(query_list)
       
       # If we've got really excellent track matches on a good number of tracks, then it's likely
       # that the GN match is just calling the artist different (VA vs artist, etc.) Prefer the name
       # in the tag if we have one and it's consistent.
       #
-      if len(query_list) > 4 and average_track_ratio > 0.88:
+      track_min_ratio = 0.88
+      if average_album_ratio > 0.90:
+        track_min_ratio = 0.75
+      if average_album_ratio > 0.98 and number_of_matched_tracks == len(query_list):
+        track_min_ratio = 0.50
+      
+      Log("Track average lev ratio %f, album lev ratio %f, required track ratio: %f" % (average_track_ratio, average_album_ratio, track_min_ratio))
+      if len(query_list) > 4 and average_track_ratio > track_min_ratio:
         if number_of_artists == 1:
           Log('Using override artist of %s' % toBytes(query_list[0].artist))
           artist_override = query_list[0].artist
