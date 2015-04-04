@@ -85,7 +85,11 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
           except: Log('There was an exception thrown reading tags.')
           
           if tags:
-            this_artist = tags['artist'][0] if 'artist' in tags else tags['albumartist'][0] if 'albumartist' in tags else tags['TPE2'][0] if 'TPE2' in tags else None
+            # See if there's an album artist tag.
+            album_artist_tags = [t for t in ['albumartist', 'TPE2', 'performer'] if t in tags]
+            album_artist_tag = album_artist_tags[0] if len(album_artist_tags) else None
+            
+            this_artist = tags[album_artist_tag][0] if album_artist_tag else tags['artist'][0] if 'artist' in tags else None
             this_album = tags['album'][0] if 'album' in tags else None
 
           if artist and artist != this_artist:
