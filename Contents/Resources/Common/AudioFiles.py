@@ -111,19 +111,23 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
   for a in albumsDict.keys():
     sameAlbum = True
     sameArtist = True
+    sameAlbumArtist = True
     prevAlbum = None
     prevArtist = None
+    prevAlbumArtist = None
     blankAlbumArtist = True
     for t in albumsDict[a]:
       if prevAlbum == None: prevAlbum = t.album
       if prevArtist == None: prevArtist = t.artist
+      if prevAlbumArtist == None: prevAlbumArtist = t.album_artist
       if prevAlbum.lower() != t.album.lower(): sameAlbum = False
       if prevArtist.lower() != t.artist.lower(): sameArtist = False
+      if prevAlbumArtist and t.album_artist and prevAlbumArtist.lower() != t.album_artist.lower(): sameAlbumArtist = False
       prevAlbum = t.album
       prevArtist = t.artist
       if t.album_artist and len(t.album_artist.strip()) > 0:
         blankAlbumArtist = False
-    
+
     if sameAlbum == True and sameArtist == False and blankAlbumArtist:
       if percentSameArtist < .9: #if the number of the same artist is less than X%, let's VA it (else, let's use the most common artist)
         newArtist = 'Various Artists'
@@ -131,6 +135,11 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
         newArtist = maxArtistName
       for tt in albumsDict[a]:
         tt.album_artist = newArtist
+    
+    # Same artist and album, but album artist look whacky? Make consistent.
+    if sameArtist and sameAlbum and not sameAlbumArtist:
+      for tt in albumsDict[a]:
+        tt.album_artist = tt.artist
         
   for t in albumTracks:
     mediaList.append(t)
