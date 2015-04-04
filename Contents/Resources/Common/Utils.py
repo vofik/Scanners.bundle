@@ -42,10 +42,13 @@ def CleanUpString(s):
   
   # Strip leading "the/a"
   s = re.sub('^(the|a) ', '', s)
+
+  # Symbols.
+  s = re.sub('[\'";,-]+', '', s)
   
   # Spaces.
   s = re.sub('[ ]+', ' ', s).strip()
-    
+
   return s
   
 # Compute Levenshtein distance.
