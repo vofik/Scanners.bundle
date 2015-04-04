@@ -351,11 +351,50 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
 
   # Sanity check the result if we have sane input.
-  if do_quick_match == True or multiple == False:
+  artist_override = None
+  number_of_artists = len(set([q.artist for q in query_list]))
+  number_of_matched_tracks = len([i for i,q in enumerate(query_list) if str(i) in matched_tracks])
+  
+  if (do_quick_match == True or multiple == False and number_of_artists == 1) and query_list[0].artist != '[Unknown Artist]':
+
+    # Start with a medium (and arbitrary) ratio.
+    min_ratio = 0.60
+    
     ratio = LevenshteinRatio(consensus_track.artist, query_list[0].artist)
-    if ratio < 0.50:
-      Log("Distance between matched artist (%s) and sane artist input (%s) was too big (%f)" % (toBytes(consensus_track.artist), query_list[0].artist, ratio))
-      return (0, 0, 0)
+    Log("Sanity checking lev artist ratio of %f with required minumum of %f" % (ratio, min_ratio))
+    if ratio < min_ratio:
+      
+      # We're suspicous. Let's check the track titles and see how they matched.
+      total_track_ratio = 0
+      for i, query_track in enumerate(query_list):
+        if str(i) in matched_tracks:
+          track_title = improve_from_tag(query_track.name, query_track.parts[0], 'title')
+          
+          # Sometimes tracks end up with artist name.
+          if track_title.find(query_track.artist) == 0:
+            track_title = track_title[len(query_track.artist):]
+                    
+          total_track_ratio += LevenshteinRatio(matched_tracks[str(i)].getAttribute('title'), track_title)
+      
+      average_track_ratio = total_track_ratio / len(query_list)
+      Log("Total track lev ratio (%f) or an average of %f per track" % (total_track_ratio, average_track_ratio))
+      
+      # If we've got really excellent track matches on a good number of tracks, then it's likely
+      # that the GN match is just calling the artist different (VA vs artist, etc.) Prefer the name
+      # in the tag if we have one and it's consistent.
+      #
+      if len(query_list) > 4 and average_track_ratio > 0.88:
+        if number_of_artists == 1:
+          Log('Using override artist of %s' % toBytes(query_list[0].artist))
+          artist_override = query_list[0].artist
+      elif average_track_ratio < 0.75 or ratio < 0.20:
+        return (0, 0, 0)
+
+  # Check for Various Artists albums which come back matching to an artist, or movie name.
+  number_of_album_artists = len(set([q.album_artist for q in query_list if q.album_artist]))
+  if number_of_artists > 1 and number_of_album_artists == 1 and query_list[0].album_artist and LevenshteinRatio(query_list[0].album_artist, 'Various Artists') > 0.9:
+    Log('Using override artist of Various Artists')
+    artist_override = 'Various Artists'
 
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
@@ -366,6 +405,10 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     if str(i) in matched_tracks:
       try:
         track = matched_tracks[str(i)]
+
+        final_artist = artist_override or track.getAttribute('grandparentTitle')
+        if artist_override:
+          consensus_track.artist = artist_override
 
         # Index doesn't match and disc doesn't match and there is more than one album involved.
         if unique_albums > 1 and (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex') or 1)):
@@ -393,7 +436,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         t = Media.Track(
           index=int(track.getAttribute('index')),
           album=toBytes(track.getAttribute('parentTitle')),
-          artist=toBytes(track.getAttribute('originalTitle') or track.getAttribute('grandparentTitle')),
+          artist=toBytes(track.getAttribute('originalTitle') or final_artist),
           title=toBytes(track.getAttribute('title')),
           disc=toBytes(track.getAttribute('parentIndex')),
           album_thumb_url=toBytes(track.getAttribute('parentThumb')),
@@ -404,8 +447,8 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
           artist_guid=toBytes(track.getAttribute('grandparentGUID')))
 
         # Set the album_artist if we got a track artist and it differs from the album's primary contributor.
-        if track.getAttribute('originalTitle') and toBytes(track.getAttribute('grandparentTitle')) != t.artist:
-          t.album_artist = toBytes(track.getAttribute('grandparentTitle'))
+        if track.getAttribute('originalTitle') and toBytes(final_artist) != t.artist:
+          t.album_artist = toBytes(final_artist)
 
         t.parts.append(parts[int(track.getAttribute('userData'))])
 
