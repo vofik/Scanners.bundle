@@ -279,6 +279,10 @@ def has_sane_track_indexes(query_list):
 
 def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False, multiple=False, do_quick_match=False):
 
+  # This shouldn't happen, but be safe.
+  if len(query_list) == 0:
+    return (0, 0, 0)
+
   # See if input looks like a sane album
   sane_input_tracks = has_sane_track_indexes(query_list)
 
