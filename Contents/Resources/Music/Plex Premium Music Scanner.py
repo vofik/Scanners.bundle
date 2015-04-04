@@ -144,10 +144,10 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
           title = re.sub(r'^[\W\-]+', '', title).strip()
 
           # Last chance for artist or album prefix.
-          if not strip_artist and title.decode('utf-8').find(artist.lower()) == 0:
+          if not strip_artist and title.decode('utf-8').lower().find(artist.lower()) == 0:
             title = title[len(artist):]
             
-          if not strip_album and title.decode('utf-8').find(album.lower()) == 0:
+          if not strip_album and title.decode('utf-8').lower().find(album.lower()) == 0:
             title = title[len(album):]
       
           t = Media.Track(artist=toBytes(artist), album=toBytes(album), title=toBytes(title), index=int(index))
