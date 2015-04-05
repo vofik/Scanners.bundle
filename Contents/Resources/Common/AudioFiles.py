@@ -39,6 +39,7 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
   for f in files:
     try:
       artist = None
+      parsed_title = False
       (artist, album, title, track, disc, album_artist, compil) = getInfoFromTag(f, language)
       #print 'artist: ', artist, ' | album_artist: ', album_artist, ' | album: ', album, ' | disc: ', str(disc), ' | title: ', title, ' | compilation: ' + str(compil)
       if album_artist and album_artist.lower() in various_artists: #(compil == '1' and (album_artist is None or len(album_artist.strip()) == 0)) or (
@@ -49,6 +50,7 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
         album = '[Unknown Album]'
       if title == None or len(title) == 0: #use the filename for the title
         title = os.path.splitext(os.path.split(f)[1])[0]
+        parsed_title = True
 
       if track == None:
         # See if we have a tracknumber in the title; if so, extract and strip it.
@@ -58,7 +60,7 @@ def Process(path, files, mediaList, subdirs, language=None, root=None):
           track, new_title = int(m.group(1)), m.group(2)
           
           # If we don't have a title, steal it from the filename.
-          if title == None:
+          if title == None or parsed_title == True:
             title = new_title
       else:
         # Check to see if the title starts with the track number and whack it.
