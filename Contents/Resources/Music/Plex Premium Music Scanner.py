@@ -401,7 +401,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         if number_of_artists == 1:
           Log('Using override artist of %s' % toBytes(query_list[0].artist))
           artist_override = query_list[0].artist
-      elif average_track_ratio < 0.75 or ratio < 0.20:
+      elif len(query_list) < 4 or average_track_ratio < 0.75 or ratio < 0.20:
         return (0, 0, 0)
 
   # Check for Various Artists albums which come back matching to an artist, or movie name.
