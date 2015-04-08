@@ -424,6 +424,10 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         if artist_override:
           consensus_track.artist = artist_override
 
+        # Clean out any spurious track artists that exactly match the album artist.
+        if track.getAttribute('originalTitle') == track.getAttribute('grandparentTitle'):
+          track.setAttribute('originalTitle', '')
+
         # Index doesn't match and disc doesn't match and there is more than one album involved.
         if unique_albums > 1 and (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex') or 1)):
           Log("Both disc (%s -> %s) and track (%s -> %s) mismatched, we're going to treat this as a bad match." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
