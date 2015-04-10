@@ -60,16 +60,24 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
       else:
         tracks[index] = True
 
-    # Make sure we are on the first disc.
+    # Read the first track's tags to check for milti-disc and VA.
     if do_quick_match:
-      first_file = files[0]
+      disc = album_artist = None
       try:
-        (artist, album, title, track, disc, album_artist, compil) = AudioFiles.getInfoFromTag(first_file, language)
-        if disc is not None and disc > 1:
-          Log('Skipping quick match because of non-first disc.')
-          do_quick_match = False
+        (artist, album, title, track, disc, album_artist, compil) = AudioFiles.getInfoFromTag(files[0], language)
       except:
-        pass
+        Log('Exception reading tags from first file; doing expensive matching.')
+        do_quick_match = False
+
+      # Make sure we are on the first disc.
+      if disc is not None and disc > 1:
+        Log('Skipping quick match because of non-first disc.')
+        do_quick_match = False
+
+      # We want to read all the tags for VA albums to pick up track artists.
+      if album_artist is not None and album_artist == 'Various Artists':
+        Log('Skipping quick match for Various Artists album.')      
+        do_quick_match = False
 
     artist = None
     album = None
@@ -205,7 +213,7 @@ def run_queries(discs, result_list, language, fingerprint, mixed, do_quick_match
   
   # If the result looks shoddy, try with fingerprinting.
   if albums1 > len(discs) or match1 < 75 or arts1 == 0:
-    Log("Not impressed, trying the other way (fingerprinting: %s)" % (not fingerprint))
+    Log('Not impressed, trying the other way (fingerprinting: %s)' % (not fingerprint))
     other_result_list = []
     (match2, albums2, arts2) = run_query_on_discs(discs, other_result_list, language, not fingerprint, mixed, do_quick_match)
     
@@ -224,7 +232,7 @@ def run_query_on_discs(discs, result_list, language, fingerprint, mixed, do_quic
     match1 += match * len(tracks)
 
   match1 = match1 / float(total_tracks)
-  Log("Querying all discs generated %d albums and a total match of %d" % (albums1, match1))
+  Log('Querying all discs generated %d albums and a total match of %d' % (albums1, match1))
 
   return (match1, albums1, arts1)
 
@@ -247,7 +255,7 @@ def group_tracks_by_disc(query_list):
     if t.index < last_index:
       disc += 1
       if t.index != 1:
-        Log("Disc %d didn't start with first track, we won't use this method." % disc)
+        Log('Disc %d didn\'t start with first track, we won\'t use this method.' % disc)
         tracks_by_disc = defaultdict(list)
         break
     tracks_by_disc[disc].append(t)
@@ -314,7 +322,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       args += '&tracks[%d].index=%s' % (i, track.index)
     if track.disc:
       args += '&tracks[%d].parentIndex=%s' % (i, track.disc)
-    Log(" - %s/%s - %s/%s - %s" % (track.artist, track.album, track.disc, track.index, track.name))
+    Log(' - %s/%s - %s/%s - %s' % (track.artist, track.album, track.disc, track.index, track.name))
 
   url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d&multiple=%d%s&lang=%s' % (fingerprint, mixed, multiple, args, language)
   try:
@@ -334,7 +342,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   if DEBUG:
     Log('Raw track matches:')
     for track in [match[1] for match in matched_tracks.items()]:
-      Log("  - %s / %s - %s/%s - %s" %(track.getAttribute('grandparentTitle'), track.getAttribute('parentTitle'), track.getAttribute('parentIndex'), track.getAttribute('index'), track.getAttribute('title')))
+      Log('  - %s / %s - %s/%s - %s' %(track.getAttribute('grandparentTitle'), track.getAttribute('parentTitle'), track.getAttribute('parentIndex'), track.getAttribute('index'), track.getAttribute('title')))
 
   # Look through the results and determine some consensus metadata so we can do a better job of keeping rogue and 
   # unmatched tracks together. We're going to weight matches in the first third of the tracks twice as high, for 
@@ -365,10 +373,10 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     min_ratio = 0.60
     
     ratio = LevenshteinRatio(consensus_track.artist, query_list[0].artist)
-    Log("Sanity checking lev artist ratio of %f with required minumum of %f" % (ratio, min_ratio))
+    Log('Sanity checking lev artist ratio of %f with required minumum of %f' % (ratio, min_ratio))
     if ratio < min_ratio:
       
-      # We're suspicous. Let's check the track titles and see how they matched.
+      # We're suspicous. Let's check the track titles and artists and see how they matched.
       total_track_ratio = 0
       total_album_ratio = 0
     
@@ -396,7 +404,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       if average_album_ratio > 0.98 and number_of_matched_tracks == len(query_list):
         track_min_ratio = 0.50
       
-      Log("Track average lev ratio %f, album lev ratio %f, required track ratio: %f" % (average_track_ratio, average_album_ratio, track_min_ratio))
+      Log('Track average lev ratio %f, album lev ratio %f, required track ratio: %f' % (average_track_ratio, average_album_ratio, track_min_ratio))
       if len(query_list) > 4 and average_track_ratio > track_min_ratio:
         if number_of_artists == 1:
           Log('Using override artist of %s' % toBytes(query_list[0].artist))
@@ -409,6 +417,13 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   if number_of_artists > 1 and number_of_album_artists == 1 and query_list[0].album_artist and LevenshteinRatio(query_list[0].album_artist, 'Various Artists') > 0.9:
     Log('Using override artist of Various Artists')
     artist_override = 'Various Artists'
+
+    # Restore track artists from tags if necessary.
+    for i, query_track in enumerate(query_list):
+      track = matched_tracks[str(i)]
+      if query_track.artist and not track.getAttribute('originalTitle'):
+        Log('Restoring track artist %s from tags for track %d - %s' % (query_track.artist, query_track.index, query_track.name))
+        track.setAttribute('originalTitle', query_track.artist)
 
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
@@ -430,7 +445,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
 
         # Index doesn't match and disc doesn't match and there is more than one album involved.
         if unique_albums > 1 and (query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex') or 1)):
-          Log("Both disc (%s -> %s) and track (%s -> %s) mismatched, we're going to treat this as a bad match." % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
+          Log('Both disc (%s -> %s) and track (%s -> %s) mismatched, we\'re going to treat this as a bad match.' % (query_track.disc, track.getAttribute('parentIndex'), int(track.getAttribute('index') or -1), query_track.index))
           tracks_without_matches.append((query_track, parts[i]))
           track_mismatches += 1
           continue
@@ -542,9 +557,9 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       for track in result_list:
         track.album = better_album
   
-  Log("STAT MATCH PERCENTAGE: %f" % match_percentage)
-  Log("STAT ALBUMS MATCHED: %d" % number_of_albums)
-  Log("STAT ALBUM ART: %d" % number_of_album_art)
+  Log('STAT MATCH PERCENTAGE: %f' % match_percentage)
+  Log('STAT ALBUMS MATCHED: %d' % number_of_albums)
+  Log('STAT ALBUM ART: %d' % number_of_album_art)
   
   return (match_percentage, number_of_albums, number_of_album_art)
 
