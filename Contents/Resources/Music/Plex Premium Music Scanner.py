@@ -405,7 +405,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         track_min_ratio = 0.50
       
       Log('Track average lev ratio %f, album lev ratio %f, required track ratio: %f' % (average_track_ratio, average_album_ratio, track_min_ratio))
-      if len(query_list) > 4 and average_track_ratio > track_min_ratio:
+      if len(query_list) >= 4 and average_track_ratio > track_min_ratio:
         if number_of_artists == 1:
           Log('Using override artist of %s' % toBytes(query_list[0].artist))
           artist_override = query_list[0].artist
@@ -549,9 +549,16 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   match_percentage = (perfect_matches / float(len(query_list))) * 100.0
   number_of_albums = len(set([track.album_guid for track in result_list]))
   number_of_album_art = reduce(lambda count, (track): count + 1 if track.album_thumb_url is not None and len(track.album_thumb_url) > 0 else 0, result_list, 0)
-  
+  track_mismatch_percentage = (track_mismatches/float(len(query_list))) * 100.0
+
+  # If we had a high percentage of track mismatches and a bad album Lev ratio, bail.
+  album_lev_ratio = LevenshteinRatio(consensus_track.album, query_list[0].album)
+  if track_mismatch_percentage > 30 and album_lev_ratio < .9:
+    Log('%d%% of tracks were mismatched and album also looked like a bad match (%s vs. %s, lev ratio %d), won\'t use this result.' % (track_mismatch_percentage, consensus_track.album, query_list[0].album, album_lev_ratio))
+    return (0, 0, 0)
+
   # Some EPs get matches as the "parent" album. Symptoms include reordered tracks, and generally less tracks.
-  if number_of_albums == 1 and (track_mismatches/float(len(query_list)) > 0.5 or match_percentage < 75) and len(query_list) < 9:
+  if number_of_albums == 1 and (track_mismatch_percentage > 50 or match_percentage < 75) and len(query_list) < 9:
     better_album = improve_from_tag('', query_list[0].parts[0], 'album')
     if len(better_album) > 0:
       for track in result_list:
