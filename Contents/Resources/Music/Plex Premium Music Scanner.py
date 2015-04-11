@@ -323,7 +323,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
       args += '&tracks[%d].index=%s' % (i, track.index)
     if track.disc:
       args += '&tracks[%d].parentIndex=%s' % (i, track.disc)
-    Log(' - %s/%s - %s/%s - %s' % (track.artist, track.album, track.disc, track.index, track.name))
+    Log(' - %s/%s - %s/%s - %s' % (toBytes(track.artist), toBytes(track.album), toBytes(track.disc), toBytes(track.index), toBytes(track.name)))
 
   url = 'http://127.0.0.1:32400/services/gracenote/search?fingerprint=%d&mixedContent=%d&multiple=%d%s&lang=%s' % (fingerprint, mixed, multiple, args, language)
   try:
@@ -415,10 +415,11 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
 
     # Restore track artists from tags if necessary.
     for i, query_track in enumerate(query_list):
-      track = matched_tracks[str(i)]
-      if query_track.artist and not track.getAttribute('originalTitle'):
-        Log('Restoring track artist %s from tags for track %d - %s' % (query_track.artist, query_track.index, query_track.name))
-        track.setAttribute('originalTitle', query_track.artist)
+      if str(i) in matched_tracks:
+        track = matched_tracks[str(i)]
+        if query_track.artist and not track.getAttribute('originalTitle'):
+          Log('Restoring track artist %s from tags for track %d - %s' % (query_track.artist, query_track.index, query_track.name))
+          track.setAttribute('originalTitle', query_track.artist)
 
   # Add Gracenote results to the result_list where we have them.
   tracks_without_matches = []
