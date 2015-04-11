@@ -451,6 +451,12 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         if (not query_track.index or query_track.index and int(track.getAttribute('index') or -1) != query_track.index) and (len(matched_tracks) < len(query_list) or unique_albums > 1 or len(matched_tracks) != unique_indices):
           Log('Track index changed (%s -> %s) and match was not perfect, using merged hints.' % (query_track.index, track.getAttribute('index')))
           result_list.append(merge_hints(query_track, consensus_track, parts[i], do_quick_match))
+          
+          # See how bad the track title mismatch was.
+          if compute_track_lev_ratio(query_track, track) > 0.90:
+            Log('Even though track index changed, giving partial credit because lev ratio was high')
+            perfect_matches += 0.50
+
           track_mismatches += 1
           continue
 
@@ -489,12 +495,12 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
         
         # Subtract from score if the index didn't match, and use the parsed index, it's likely to be more accurate.
         if query_track.index and int(track.getAttribute('index') or -1) != query_track.index:
-          Log('Imperfect track index match, less than full bonus and respect original track index.')
+          lev = compute_track_lev_ratio(query_track, track)
           
           # Penalize more if disc mismatches as well.
           if query_track.disc and track.getAttribute('parentIndex') and query_track.disc != int(track.getAttribute('parentIndex')):
-            # This looks pretty bad.
-            perfect_matches += 0.25
+            # This looks pretty bad, but not as bad if track was a good match.
+            perfect_matches += 0.50 if (lev > 0.95) else 0.25
           else:
             # This is less bad, and we steal the index from the query, since otherwise we might end up with dupes.
             perfect_matches += 0.75
