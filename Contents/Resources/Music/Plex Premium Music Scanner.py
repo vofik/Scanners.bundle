@@ -14,6 +14,7 @@ from UnicodeHelper import toBytes
 
 DEBUG = True
 RE_MULTIDISC = re.compile(r'[ \-:]*\[*disc ([0-9])\][ \-]*', flags=re.IGNORECASE)
+RE_ADDENDUM = re.compile(' ([(\[].+[)\]])$')
 
 def Scan(path, files, media_list, subdirs, language=None, root=None):
 
@@ -376,19 +377,13 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     Log('Sanity checking lev artist ratio of %f with required minumum of %f' % (ratio, min_ratio))
     if ratio < min_ratio:
       
-      # We're suspicous. Let's check the track titles and artists and see how they matched.
+      # We're suspicous. Let's check the track titles and album names and see how they matched.
       total_track_ratio = 0
       total_album_ratio = 0
     
       for i, query_track in enumerate(query_list):
         if str(i) in matched_tracks:
-          track_title = improve_from_tag(query_track.name, query_track.parts[0], 'title')
-          
-          # Sometimes tracks end up with artist name.
-          if track_title.find(query_track.artist) == 0:
-            track_title = track_title[len(query_track.artist):]
-                    
-          total_track_ratio += LevenshteinRatio(matched_tracks[str(i)].getAttribute('title'), track_title)
+          total_track_ratio += compute_track_lev_ratio(query_track, matched_tracks[str(i)])
           total_album_ratio += LevenshteinRatio(matched_tracks[str(i)].getAttribute('parentTitle'), query_track.album)
       
       average_track_ratio = total_track_ratio / len(query_list)
@@ -598,6 +593,23 @@ def merge_hints(query_track, consensus_track, part, do_quick_match):
   #  merged_track.name = toBytes(merged_track.name + ' [MERGED GN MISS]')
 
   return merged_track
+  
+def compute_track_lev_ratio(query_track, matched_track):
+  track_title = improve_from_tag(query_track.name, query_track.parts[0], 'title')
+  
+  # Sometimes tracks end up with artist name.
+  if track_title.find(query_track.artist) == 0:
+    track_title = track_title[len(query_track.artist):]
+    
+  other_track_track = matched_track.getAttribute('title')
+    
+  # Sometimes one track will have a parenthetical and the other one doesn't.
+  if RE_ADDENDUM.search(track_title) and not RE_ADDENDUM.search(other_track_track):
+    track_title = RE_ADDENDUM.sub('', track_title)
+  elif RE_ADDENDUM.search(other_track_track) and not RE_ADDENDUM.search(track_title):
+    other_track_track = RE_ADDENDUM.sub('', other_track_track)
+
+  return LevenshteinRatio(other_track_track, track_title)
   
 def improve_from_tag(existing, file, tag):
   tags = mutagen.File(file, easy=True)
