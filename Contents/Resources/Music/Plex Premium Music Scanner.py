@@ -13,6 +13,7 @@ from Utils import Log, LevenshteinDistance, LevenshteinRatio
 from UnicodeHelper import toBytes
 
 DEBUG = True
+RE_MULTIDISC = re.compile(r'[ \-:]*\[*disc ([0-9])\][ \-]*', flags=re.IGNORECASE)
 
 def Scan(path, files, media_list, subdirs, language=None, root=None):
 
@@ -539,13 +540,16 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # returned named correctly but claiming to be disc 1.
   #
   for t in result_list:
-    m = re.search('[ \-:]*\[*disc ([0-9])\][ \-]*', t.album, flags=re.IGNORECASE)
+    m = RE_MULTIDISC.search(t.album)
     if m:
       t.disc = int(m.group(1))
       t.album = t.album[:m.start()].strip()
 
+  # Compute a penalty for multiple album titles after trimming out multi-disc cruft.
+  album_title_penalty = len(set([RE_MULTIDISC.sub('', t.album).strip() for t in result_list]))
+
   # Compute a score.
-  match_percentage = (perfect_matches / float(len(query_list))) * 100.0
+  match_percentage = (perfect_matches / float(len(query_list))) * 100.0 - album_title_penalty
   number_of_albums = len(set([track.album_guid for track in result_list]))
   number_of_album_art = reduce(lambda count, (track): count + 1 if track.album_thumb_url is not None and len(track.album_thumb_url) > 0 else 0, result_list, 0)
   track_mismatch_percentage = (track_mismatches/float(len(query_list))) * 100.0
