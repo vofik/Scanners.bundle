@@ -171,7 +171,6 @@ def Scan(path, files, media_list, subdirs, language=None, root=None):
     else:
       AudioFiles.Process(path, files, media_list, subdirs, root)
       query_list = list(media_list)
-      fingerprint = True
     
     # Try as-is first (ask for everything at once).
     discs = [query_list]
@@ -554,7 +553,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   # If we had a high percentage of track mismatches and a bad album Lev ratio, bail.
   album_lev_ratio = LevenshteinRatio(consensus_track.album, query_list[0].album)
   if track_mismatch_percentage > 30 and album_lev_ratio < .9:
-    Log('%d%% of tracks were mismatched and album also looked like a bad match (%s vs. %s, lev ratio %d), won\'t use this result.' % (track_mismatch_percentage, consensus_track.album, query_list[0].album, album_lev_ratio))
+    Log('%d%% of tracks were mismatched and album also looked like a bad match (%s vs. %s, lev ratio %f), won\'t use this result.' % (track_mismatch_percentage, consensus_track.album, query_list[0].album, album_lev_ratio))
     return (0, 0, 0)
 
   # Some EPs get matches as the "parent" album. Symptoms include reordered tracks, and generally less tracks.
