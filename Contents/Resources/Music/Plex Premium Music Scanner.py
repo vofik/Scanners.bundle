@@ -268,23 +268,32 @@ def group_tracks_by_disc(query_list):
   # Otherwise, let's consider it a single disc.
   return [query_list]
 
-def has_sane_track_indexes(query_list):
-  indexes = []
+def compute_input_sanity(query_list):
+  indexes = defaultdict(list)
   for track in query_list:
-    indexes.append(track.index)
+    disc = track.disc if track.disc else 1
+    indexes[disc].append(track.index)
   
-  # See if we have contiguous tracks.
+  # See if we have contiguous/unique tracks.
   contiguous = True
-  indexes.sort()
-  for i, index in enumerate(indexes):
-    if i + 1 != index:
-      contiguous = False
-      break
-  
-  # See if they're unique.
-  unique = (len(query_list) == len(set(indexes)))
+  unique = True
 
-  return contiguous or unique
+  for disc in indexes.keys():
+    indexes[disc].sort()
+    
+    # See if they're contiguous.
+    for i, index in enumerate(indexes[disc]):
+      if i + 1 != index:
+        contiguous = False
+        break
+  
+    # See if they're unique.
+    unique = unique and (len(indexes[disc]) == len(set(indexes[disc])))
+
+  # See how many distinct album names.
+  unique_albums = len(set([t.album for t in query_list]))
+
+  return (contiguous and unique, unique_albums, len(indexes))
 
 def lookup(query_list, result_list, language=None, fingerprint=False, mixed=False, multiple=False, do_quick_match=False):
 
@@ -293,7 +302,7 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     return (0, 0, 0)
 
   # See if input looks like a sane album
-  sane_input_tracks = has_sane_track_indexes(query_list)
+  (sane_input_tracks, unique_input_albums, input_discs) = compute_input_sanity(query_list)
 
   # Build up the query with the contents of the query list.
   args = ''
