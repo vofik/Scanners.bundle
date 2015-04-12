@@ -361,7 +361,11 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
   year_list = [t[1].getAttribute('year') for t in sorted_items]
   year_consensus = Counter(year_list).most_common()[0][0] if len(year_list) > 0 else -1
 
-  consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc='1', artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
+  # If the matches are all from a single disc, use it, that way when we merge in missed tracks they won't be left out.
+  disc_list = list(set([t[1].getAttribute('parentIndex') for t in sorted_items]))
+  disc_consensus = disc_list[0] if len(disc_list) == 1 else 1
+
+  consensus_track = Media.Track(album_guid=album_consensus[0], album=album_consensus[1], album_thumb_url=album_consensus[2], disc=disc_consensus, artist=artist_consensus[1], artist_guid=artist_consensus[0], artist_thumb_url=artist_consensus[2], year=year_consensus)
 
   # Sanity check the result if we have sane input.
   artist_override = None
