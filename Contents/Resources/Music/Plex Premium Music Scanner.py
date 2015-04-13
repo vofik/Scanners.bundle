@@ -9,7 +9,7 @@ from collections import Counter, defaultdict
 import Media
 import AudioFiles
 import mutagen
-from Utils import Log, LevenshteinDistance, LevenshteinRatio
+from Utils import Log, LevenshteinDistance, LevenshteinRatio, CleanUpString
 from UnicodeHelper import toBytes
 
 DEBUG = True
@@ -386,8 +386,10 @@ def lookup(query_list, result_list, language=None, fingerprint=False, mixed=Fals
     # Start with a medium (and arbitrary) ratio.
     min_ratio = 0.60
     
-    ratio = LevenshteinRatio(consensus_track.artist, query_list[0].artist)
-    Log('Sanity checking lev artist ratio of %f with required minumum of %f' % (ratio, min_ratio))
+    clean_query_artist = CleanUpString(query_list[0].artist)
+    clean_result_artist = CleanUpString(consensus_track.artist)
+    ratio = LevenshteinRatio(clean_query_artist, clean_result_artist)
+    Log('Sanity checking lev artist ratio for %s vs. %s; got %f with required minumum of %f' % (clean_query_artist, clean_result_artist, ratio, min_ratio))
     if ratio < min_ratio:
       
       # We're suspicous. Let's check the track titles and album names and see how they matched.

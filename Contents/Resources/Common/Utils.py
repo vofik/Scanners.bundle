@@ -34,6 +34,9 @@ def CleanUpString(s):
   # Ands.
   s = s.replace('&', 'and')
 
+  # Strip trailing ", the"
+  s = re.sub('(, the)$', '', s, flags=re.IGNORECASE)
+
   # Strip diacritics and punctuation.
   s = u''.join([c for c in s if not unicodedata.combining(c) and not unicodedata.category(c).startswith('P')])
   
