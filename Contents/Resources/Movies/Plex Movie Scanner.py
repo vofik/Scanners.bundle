@@ -109,9 +109,20 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None, **kwargs):
     # Check for a folder with multiple 'CD' subfolders and massage
     foundCDsubdirs = {}
     for s in subdirs:
-      m = re.match('cd[ ]*([0-9]+)', os.path.basename(s).lower())
+      m = re.search(r'(?:cd|disc)[ \\.-]*([0-9]+)', os.path.basename(s).lower())
       if m:
-        foundCDsubdirs[int(m.groups(1)[0])] = s
+        foundNestedDirs = False
+        for subsubdir in os.listdir(s):
+          if os.path.isdir(os.path.join(s, subsubdir)):
+            # print os.path.join(s, subsubdir)
+            subm = re.search(r'(?:cd|disc)[ \\.-]*([0-9]+)', subsubdir.lower())
+            # print subm
+            if subm:
+              foundNestedDirs = True
+              foundCDsubdirs[m.groups(1)[0] + '-' + subm.groups(1)[0]] = os.path.join(s, subsubdir)
+
+        if foundNestedDirs == False:
+          foundCDsubdirs['0-' + m.groups(1)[0]] = s
 
     # More than one cd subdir, let's stack and whack subdirs.
     if len(foundCDsubdirs) > 1:
@@ -126,8 +137,15 @@ def Scan(path, files, mediaList, subdirs, language=None, root=None, **kwargs):
         subFiles = []
         for f in os.listdir(d):
           subFiles.append(os.path.join(d,f))
+
         VideoFiles.Scan(d, subFiles, mediaList, [], None)
-        subdirs.remove(d)
+
+        if foundNestedDirs:
+          if os.path.dirname(d) in subdirs:
+            subdirs.remove(os.path.dirname(d))
+        else:
+          subdirs.remove(d)
+
         movie.parts += subFiles
         
       if len(movie.parts) > 0:
