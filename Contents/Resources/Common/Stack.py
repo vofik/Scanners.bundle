@@ -8,8 +8,8 @@ def Scan(dir, files, mediaList, subdirs):
   
   # Go through the files and see if any of them need to be stacked.
   stack_dict = {}
-  stackDiffs = '123456789abcdefghijklmn' # These are the characters we are looking for being different across stackable filenames
-  stackSuffixes = ['cd', 'dvd', 'part', 'pt', 'disk', 'disc', 'scene']
+  stackDiffs = r'[\da-n]' # These are the characters we are looking for being different across stackable filenames
+  stackSuffixes = r'(?:cd|dvd|part|pt|disk|disc|scene)\.?(?:\d+)?$'
   scenePrefixes = r'(?:^scene.\d+|scene.\d+$)'
   
   # Sort the mediaList by filename, so we can do our compares properly
@@ -59,28 +59,27 @@ def Scan(dir, files, mediaList, subdirs):
               xOfy = True
             #prefix = f1[:i1] + f1[i2:]
             #(root, ext) = os.path.splitext(prefix)
-            
-            # Fix cases where it is something like part 01 ... part 02 -- remove that 0, so the suffix check works later
-            if root[-1:] == '0': 
-              root = root[:-1]
               
             # This is a special case for folders with multiple Volumes of a series (not a stacked movie) [e.g, Kill Bill Vol 1 / 2]
             if not root.lower().strip().endswith('vol') and not root.lower().strip().endswith('volume'): 
               
               # Strip any suffixes like CD, DVD.
               foundSuffix = False
-              for suffix in stackSuffixes:
-                if root.lower().strip().endswith(suffix):
-                  root = root[0:-len(suffix)].strip()
-                  foundSuffix = True
-                  break
+              suffixMatch = re.search(stackSuffixes, root.lower().strip())
+
+              if suffixMatch:
+                root = root[0:-len(suffixMatch.group(0))].strip(' -')
+                foundSuffix = True
               
               if foundSuffix or xOfy:
                 # Replace the name, which probably had the suffix.
                 (name, year) = VideoFiles.CleanName(root)
                 mediaItem.name = name
+                m1.stacked = True
                 if stack_dict.has_key(root):
                   stack_dict[root].append(m2)
+                  if count == len(mediaList) - 1:
+                    m2.stacked = True
                 else:
                   stack_dict[root] = [m1]
                   stack_dict[root].append(m2)
