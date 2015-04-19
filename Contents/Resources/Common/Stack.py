@@ -84,7 +84,38 @@ def Scan(dir, files, mediaList, subdirs):
                   stack_dict[root] = [m1]
                   stack_dict[root].append(m2)
     count += 1
-  
+
+  # combine stacks if possible
+  count = 0
+  stacks = stack_dict.keys()
+  for stack in stacks[:-1]:
+    s1 = stacks[count]
+    s2 = stacks[count + 1]
+    opcodes = difflib.SequenceMatcher(None, s1, s2).get_opcodes()
+
+    if len(opcodes) == 2: # We only have one transform
+      (tag, i1, i2, j1, j2) = opcodes[1]
+      if tag == 'replace': # The transform is a replace
+        if (i2-i1 == 1) and (j2-j1 == 1): # The transform is only one character
+          if re.search(stackDiffs, s1): # That one character is 1-4 or a-n
+            root = s1.lower().strip()
+            suffixMatch = re.search(stackSuffixes, root)
+            if suffixMatch:
+              root = root[0:-len(suffixMatch.group(0))].strip(' -')
+              stack_dict[root] = stack_dict[root] or []
+
+              (name, year) = VideoFiles.CleanName(root)
+
+              # merge existing two stacks into new root
+              for oldstack in [s1, s2]:
+                for media in stack_dict[oldstack]:
+                  media.name = name
+                  stack_dict[root].append(media)
+
+                del stack_dict[oldstack]
+
+    count += 1
+
   # Now combine stacked parts
   for stack in stack_dict.keys():
     for media in stack_dict[stack][1:]:
