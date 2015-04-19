@@ -2,7 +2,7 @@ import Media, VideoFiles
 import os.path, difflib, re
 
 def compareFilenames(elem):
-  return elem.parts[0]
+  return elem.parts[0].lower()
 
 def Scan(dir, files, mediaList, subdirs):
   
