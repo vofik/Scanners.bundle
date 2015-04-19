@@ -1,6 +1,6 @@
 import Media, VideoFiles
-import os.path, difflib
-          
+import os.path, difflib, re
+
 def compareFilenames(elem):
   return elem.parts[0]
 
@@ -10,15 +10,40 @@ def Scan(dir, files, mediaList, subdirs):
   stack_dict = {}
   stackDiffs = '123456789abcdefghijklmn' # These are the characters we are looking for being different across stackable filenames
   stackSuffixes = ['cd', 'dvd', 'part', 'pt', 'disk', 'disc', 'scene']
+  scenePrefixes = r'(?:^scene.\d+|scene.\d+$)'
   
   # Sort the mediaList by filename, so we can do our compares properly
   mediaList[:] = sorted(mediaList, key=compareFilenames)
-  
-  # Search for parts.
-  count = 0 
+
+  # group scene-based movie splits into a stack
+  for mediaItem in mediaList:
+    # if items were already stacked by other method, skip this attempt
+    if hasattr(mediaItem, 'stacked') and mediaItem.stacked == True:
+      continue
+
+    f1 = os.path.basename(os.path.splitext(mediaItem.parts[0])[0]).lower()
+    if re.match(scenePrefixes, f1):
+      (name, year) = VideoFiles.CleanName(re.sub(scenePrefixes, '', f1))
+
+      # TODO: Handle disparate multi-scene sets that are in a single root directory; 
+      # this currently assumes all scenes within directory belong to same release
+      root = '_scene'
+      mediaItem.name = name
+
+      stack_dict[root] = stack_dict[root] or []
+      stack_dict[root].append(mediaItem)
+      mediaItem.stacked = True
+
+  # Search for prefix-based part names.
+  count = 0
   for mediaItem in mediaList[:-1]:
     m1 = mediaList[count]
     m2 = mediaList[count + 1]
+
+    # if items were already stacked by other method, skip this attempt
+    if hasattr(m1, 'stacked') and m1.stacked == True:
+      continue
+
     f1 = os.path.basename(m1.parts[0])
     f2 = os.path.basename(m2.parts[0])
     
